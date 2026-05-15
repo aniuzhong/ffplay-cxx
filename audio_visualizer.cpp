@@ -14,8 +14,14 @@ extern "C" {
 #include <libavutil/tx.h>
 }
 
+AudioVisualizer::AudioVisualizer()
+    : display_ring_(SAMPLE_ARRAY_SIZE, 0)
+{
+}
+
 void AudioVisualizer::feed(const int16_t *samples, int count)
 {
+    std::lock_guard<std::mutex> lock(ring_mutex_);
     while (count > 0) {
         int len = SAMPLE_ARRAY_SIZE - sample_array_index_;
         if (len > count)
@@ -27,6 +33,20 @@ void AudioVisualizer::feed(const int16_t *samples, int count)
             sample_array_index_ = 0;
         count -= len;
     }
+}
+
+void AudioVisualizer::sync_display_ring()
+{
+    std::lock_guard<std::mutex> lock(ring_mutex_);
+    memcpy(display_ring_.data(), sample_array_,
+           static_cast<size_t>(SAMPLE_ARRAY_SIZE) * sizeof(int16_t));
+    display_ring_index_ = sample_array_index_;
+}
+
+int16_t AudioVisualizer::sample_at(int index) const
+{
+    const int i = compute_mod(index, SAMPLE_ARRAY_SIZE);
+    return display_ring_[static_cast<size_t>(i)];
 }
 
 AudioVisualizer::ShowMode AudioVisualizer::cycle_mode(ShowMode current, bool has_video, bool has_audio)
@@ -66,7 +86,7 @@ int AudioVisualizer::compute_start_index(int channels, int audio_write_buf_size,
     if (delay < data_used)
         delay = data_used;
 
-    return compute_mod(sample_array_index_ - delay * channels, SAMPLE_ARRAY_SIZE);
+    return compute_mod(display_ring_index_ - delay * channels, SAMPLE_ARRAY_SIZE);
 }
 
 int AudioVisualizer::prepare_waveform(int channels, int audio_write_buf_size,
@@ -83,10 +103,10 @@ int AudioVisualizer::prepare_waveform(int channels, int audio_write_buf_size,
         int h = INT_MIN;
         for (int i = 0; i < 1000; i += channels) {
             int idx = (SAMPLE_ARRAY_SIZE + x - i) % SAMPLE_ARRAY_SIZE;
-            int a = sample_array_[idx];
-            int b = sample_array_[(idx + 4 * channels) % SAMPLE_ARRAY_SIZE];
-            int c = sample_array_[(idx + 5 * channels) % SAMPLE_ARRAY_SIZE];
-            int d = sample_array_[(idx + 9 * channels) % SAMPLE_ARRAY_SIZE];
+            int a = display_ring_[static_cast<size_t>(idx)];
+            int b = display_ring_[static_cast<size_t>((idx + 4 * channels) % SAMPLE_ARRAY_SIZE)];
+            int c = display_ring_[static_cast<size_t>((idx + 5 * channels) % SAMPLE_ARRAY_SIZE)];
+            int d = display_ring_[static_cast<size_t>((idx + 9 * channels) % SAMPLE_ARRAY_SIZE)];
             int score = a - d;
             if (h < score && (b ^ c) < 0) {
                 h = score;
@@ -167,7 +187,7 @@ int AudioVisualizer::prepare_spectrum_column(int channels, int audio_write_buf_s
         int i = i_start + ch;
         for (int x = 0; x < 2 * nb_freq; x++) {
             double w = (x - nb_freq) * (1.0 / nb_freq);
-            data_in[ch][x] = sample_array_[i] * (1.0 - w * w);
+            data_in[ch][x] = display_ring_[static_cast<size_t>(i)] * (1.0 - w * w);
             i += channels;
             if (i >= SAMPLE_ARRAY_SIZE)
                 i -= SAMPLE_ARRAY_SIZE;

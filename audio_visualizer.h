@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
+#include <vector>
 
 extern "C" {
 #include <libavutil/tx.h>
@@ -12,7 +14,8 @@ public:
         None = -1, Video = 0, Waves, Rdft, Nb
     };
 
-    AudioVisualizer() = default;
+    AudioVisualizer();
+
     ~AudioVisualizer();
 
     AudioVisualizer(const AudioVisualizer &) = delete;
@@ -20,6 +23,10 @@ public:
 
     // Feed PCM samples from audio callback (replaces update_sample_display)
     void feed(const int16_t *samples, int count);
+
+    // Copy live ring into display snapshot (call from main/UI thread before
+    // prepare_waveform / prepare_spectrum_column / sample_at).
+    void sync_display_ring();
 
     // Mode management
     ShowMode mode() const { return show_mode_; }
@@ -40,7 +47,7 @@ public:
     // Ring buffer access (for waveform rendering)
     static constexpr int SAMPLE_ARRAY_SIZE = 8 * 65536;
     static int compute_mod(int a, int b) { return a < 0 ? a % b + b : a % b; }
-    int16_t sample_at(int index) const { return sample_array_[index]; }
+    int16_t sample_at(int index) const;
 
     // Spectrum output (after prepare_spectrum_column)
     int nb_freq() const { return nb_freq_; }
@@ -61,6 +68,10 @@ private:
 
     int16_t sample_array_[SAMPLE_ARRAY_SIZE] = {};
     int sample_array_index_ = 0;
+
+    std::mutex ring_mutex_;
+    std::vector<int16_t> display_ring_;
+    int display_ring_index_ = 0;
 
     ShowMode show_mode_ = ShowMode::None;
 
