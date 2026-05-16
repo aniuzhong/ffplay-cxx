@@ -18,12 +18,6 @@ extern "C" {
 #include "libswresample/swresample.h"
 }
 
-#include "frame_queue.h"
-#include "packet_queue.h"
-
-// From ffplay.cpp globals
-extern int64_t audio_callback_time;
-
 constexpr int SDL_AUDIO_MIN_BUFFER_SIZE = 512;
 constexpr int SDL_AUDIO_MAX_CALLBACKS_PER_SEC = 30;
 constexpr int SAMPLE_CORRECTION_PERCENT_MAX = 10;
@@ -54,8 +48,7 @@ int audio_params_copy_from(const AudioParams *src, AudioParams *dst)
 
 } // namespace
 
-AudioOutput::AudioOutput(FrameQueue *sampq, PacketQueue *audioq)
-    : sampq_(sampq), audioq_(audioq)
+AudioOutput::AudioOutput()
 {
 }
 
@@ -234,6 +227,7 @@ int AudioOutput::synchronize(int nb_samples, double sync_diff)
 }
 
 int AudioOutput::decode_frame(bool paused,
+                               NextAudioFrameFn next_frame,
                                const std::function<double()> &sync_diff_fn,
                                const std::function<void(const int16_t *, int)> *on_decode)
 {
@@ -241,21 +235,9 @@ int AudioOutput::decode_frame(bool paused,
         return -1;
 
     int data_size, resampled_data_size;
-    Frame *af;
-
-    do {
-#if defined(_WIN32)
-        while (sampq_->nb_remaining() == 0) {
-            if ((av_gettime_relative() - audio_callback_time)
-                > 1000000LL * audio_hw_buf_size_ / audio_tgt_.bytes_per_sec / 2)
-                return -1;
-            av_usleep(1000);
-        }
-#endif
-        if (!(af = sampq_->peek_readable()))
-            return -1;
-        sampq_->next();
-    } while (af->serial != audioq_->serial());
+    Frame *af = next_frame();
+    if (!af)
+        return -1;
 
     data_size = av_samples_get_buffer_size(nullptr, af->frame->ch_layout.nb_channels,
                                            af->frame->nb_samples,
@@ -351,12 +333,13 @@ int AudioOutput::decode_frame(bool paused,
 }
 
 void AudioOutput::read(uint8_t *stream, int len, bool paused,
+                        NextAudioFrameFn next_frame,
                         std::function<double()> sync_diff_fn,
                         const std::function<void(const int16_t *, int)> *on_decode)
 {
     while (len > 0) {
         if (audio_buf_index_ >= (int)audio_buf_size_) {
-            int audio_size = decode_frame(paused, sync_diff_fn, on_decode);
+            int audio_size = decode_frame(paused, next_frame, sync_diff_fn, on_decode);
             if (audio_size < 0) {
                 /* if error, just output silence */
                 audio_buf_ = nullptr;

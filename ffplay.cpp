@@ -1696,11 +1696,30 @@ static int subtitle_thread(void *arg)
     return 0;
 }
 
-
 static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
 {
     VideoState *is = static_cast<VideoState*>(opaque);
     audio_callback_time = av_gettime_relative();
+
+    auto next_frame = [&]() -> Frame * {
+        Frame *af = nullptr;
+        do {
+#if defined(_WIN32)
+            while (is->sampq.nb_remaining() == 0) {
+                if ((av_gettime_relative() - audio_callback_time)
+                    > 1000000LL * is->audio_out->hw_buf_size()
+                      / is->audio_out->hw_params().bytes_per_sec / 2)
+                    return nullptr;
+                av_usleep(1000);
+            }
+#endif
+            af = is->sampq.peek_readable();
+            if (!af)
+                return nullptr;
+            is->sampq.next();
+        } while (af->serial != is->audioq.serial());
+        return af;
+    };
 
     auto sd = [&]() -> double {
         if (get_master_sync_type(is) == AVSyncType::AudioMaster)
@@ -1714,7 +1733,7 @@ static void sdl_audio_callback(void *opaque, Uint8 *stream, int len)
                 is->audio_vis.feed(samples, count);
         };
 
-    is->audio_out->read(stream, len, is->paused, sd, &on_decode);
+    is->audio_out->read(stream, len, is->paused, next_frame, sd, &on_decode);
 
     if (!isnan(is->audio_out->clock())) {
         is->audclk.set_at(is->audio_out->clock_for_set_at(),
@@ -2300,7 +2319,7 @@ static VideoState *stream_open(const char *filename,
     if (!is->videoq.valid() || !is->audioq.valid() || !is->subtitleq.valid())
         goto fail;
 
-    is->audio_out = new AudioOutput(&is->sampq, &is->audioq);
+    is->audio_out = new AudioOutput();
     if (startup_volume < 0)
         av_log(nullptr, AV_LOG_WARNING, "-volume=%d < 0, setting to 0\n", startup_volume);
     if (startup_volume > 100)

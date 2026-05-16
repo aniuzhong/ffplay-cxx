@@ -9,6 +9,8 @@ extern "C" {
 #include <SDL.h>
 }
 
+#include "frame.h"
+
 struct AudioParams {
     int freq = 0;
     AVChannelLayout ch_layout = {};
@@ -20,12 +22,11 @@ struct AudioParams {
 struct AVFrame;
 struct SwrContext;
 
-class FrameQueue;
-class PacketQueue;
+using NextAudioFrameFn = std::function<Frame *()>;
 
 class AudioOutput {
 public:
-    AudioOutput(FrameQueue *sampq, PacketQueue *audioq);
+    AudioOutput();
     ~AudioOutput();
 
     AudioOutput(const AudioOutput &) = delete;
@@ -35,6 +36,7 @@ public:
              SDL_AudioCallback cb, void *cb_opaque);
 
     void read(uint8_t *stream, int len, bool paused,
+              NextAudioFrameFn next_frame,
               std::function<double()> sync_diff_fn,
               const std::function<void(const int16_t *, int)> *on_decode = nullptr);
 
@@ -55,12 +57,10 @@ public:
 
 private:
     int decode_frame(bool paused,
+                     NextAudioFrameFn next_frame,
                      const std::function<double()> &sync_diff_fn,
                      const std::function<void(const int16_t *, int)> *on_decode);
     int synchronize(int nb_samples, double sync_diff);
-
-    FrameQueue *const sampq_;
-    PacketQueue *const audioq_;
 
     SDL_AudioDeviceID audio_dev_ = 0;
 
