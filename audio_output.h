@@ -4,27 +4,18 @@
 #include <functional>
 
 extern "C" {
-#include "libavutil/channel_layout.h"
-#include "libavutil/samplefmt.h"
 #include <SDL.h>
 }
 
+#include "audio_device.h"
 #include "frame.h"
-
-struct AudioParams {
-    int freq = 0;
-    AVChannelLayout ch_layout = {};
-    AVSampleFormat fmt = AV_SAMPLE_FMT_NONE;
-    int frame_size = 0;
-    int bytes_per_sec = 0;
-};
 
 struct AVFrame;
 struct SwrContext;
 
 using NextAudioFrameFn = std::function<Frame *()>;
 
-class AudioOutput {
+class AudioOutput : public AudioDevice {
 public:
     AudioOutput();
     ~AudioOutput();
@@ -32,9 +23,22 @@ public:
     AudioOutput(const AudioOutput &) = delete;
     AudioOutput &operator=(const AudioOutput &) = delete;
 
-    int open(const AVChannelLayout *ch_layout, int sample_rate,
-             SDL_AudioCallback cb, void *cb_opaque);
+    // -- AudioDevice overrides --
+    int  open(const AVChannelLayout *ch_layout, int sample_rate,
+              SDL_AudioCallback cb, void *cb_opaque) override;
+    void close() override;
+    void unpause() override;
 
+    int  volume()       const override { return audio_volume_; }
+    void set_volume(int vol) override { audio_volume_ = vol; }
+    bool muted()        const override { return muted_; }
+    void toggle_mute()        override { muted_ = !muted_; }
+
+    int  hw_buf_size()  const override { return audio_hw_buf_size_; }
+    int  write_buf_size() const override { return audio_write_buf_size_; }
+    const AudioParams &hw_params() const override { return audio_tgt_; }
+
+    // -- Methods used by sdl_audio_callback (to be moved into AudioPipeline later) --
     void read(uint8_t *stream, int len, bool paused,
               NextAudioFrameFn next_frame,
               std::function<double()> sync_diff_fn,
@@ -43,17 +47,6 @@ public:
     double clock_for_set_at() const;
     double clock() const { return audio_clock_; }
     int clock_serial() const { return audio_clock_serial_; }
-    const AudioParams &hw_params() const { return audio_tgt_; }
-    int hw_buf_size() const { return audio_hw_buf_size_; }
-    int write_buf_size() const { return audio_write_buf_size_; }
-    void unpause();
-
-    int volume() const { return audio_volume_; }
-    void set_volume(int vol) { audio_volume_ = vol; }
-    bool muted() const { return muted_; }
-    void toggle_mute() { muted_ = !muted_; }
-
-    void close();
 
 private:
     int decode_frame(bool paused,

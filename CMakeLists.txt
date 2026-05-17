@@ -68,6 +68,7 @@ add_executable(ffplay-cpp
     utils/w32dlfcn.h
     audio_output.h
     audio_output.cpp
+    audio_device.h
     demuxer.h
     demuxer.cpp
     audio_visualizer.h
@@ -85,7 +86,19 @@ add_executable(ffplay-cpp
     video_output.h
     video_output.cpp
     sdl_video_output.h
-    sdl_video_output.cpp)
+    sdl_video_output.cpp
+    null_video_output.h
+    null_video_output.cpp
+    null_audio_device.h
+    null_audio_device.cpp
+    player.h
+    player.cpp
+    video_pipeline.h
+    video_pipeline.cpp
+    audio_pipeline.h
+    audio_pipeline.cpp
+    subtitle_pipeline.h
+    subtitle_pipeline.cpp)
 
 target_include_directories(ffplay-cpp PRIVATE
     "${FFPLAY_GEN_DIR}"

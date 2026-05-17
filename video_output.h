@@ -14,7 +14,7 @@ extern "C" {
 struct AVFrame;
 struct Frame;
 class AudioVisualizer;
-class AudioOutput;
+class AudioDevice;
 
 class VideoOutput {
 public:
@@ -22,10 +22,10 @@ public:
     VideoOutput(const VideoOutput &) = delete;
     VideoOutput &operator=(const VideoOutput &) = delete;
 
-    // Non-virtual template method.  Calls close() to release previous
-    // resources, performs SDL window operations, then calls
-    // create_resources_impl().  Idempotent — safe to call multiple times.
-    int open(int w, int h, int x, int y, const char *title, bool fullscreen);
+    // Idempotent — safe to call multiple times. Subclasses implement the full
+    // window + resource creation sequence.
+    virtual int open(int w, int h, int x, int y,
+                     const char *title, bool fullscreen) = 0;
 
     // Non-virtual template method.  Calls release_resources_impl() if
     // resources have been created.  Safe to call multiple times.
@@ -36,7 +36,7 @@ public:
 
     // Each implementation is responsible for its own Clear + Present.
     virtual void display(Frame *vp, Frame *sp) = 0;
-    virtual void display_audio_vis(AudioVisualizer *vis, AudioOutput *out,
+    virtual void display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
                                    int64_t callback_time, bool paused) = 0;
 
     // Clear expired subtitle texture areas.

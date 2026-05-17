@@ -15,8 +15,10 @@ public:
     SDLVideoOutput(const SDLVideoOutput &) = delete;
     SDLVideoOutput &operator=(const SDLVideoOutput &) = delete;
 
+    int  open(int w, int h, int x, int y,
+              const char *title, bool fullscreen) override;
     void display(Frame *vp, Frame *sp) override;
-    void display_audio_vis(AudioVisualizer *vis, AudioOutput *out,
+    void display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
                            int64_t callback_time, bool paused) override;
     void clear_subtitle_areas(Frame *sp) override;
 

@@ -13,27 +13,6 @@ VideoOutput::VideoOutput(SDL_Window *window)
 {
 }
 
-int VideoOutput::open(int w, int h, int x, int y,
-                       const char *title, bool fullscreen)
-{
-    close();
-
-    SDL_SetWindowTitle(window_, title);
-    SDL_SetWindowSize(window_, w, h);
-    SDL_SetWindowPosition(window_, x, y);
-    SDL_SetWindowFullscreen(window_, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-    SDL_ShowWindow(window_);
-
-    int ret = create_resources_impl();
-    if (ret < 0) {
-        // Window may already reflect (w,h,title,fullscreen). Subclasses that
-        // can fail after SDL_SetWindow* should revert or document stale UI.
-        return ret;
-    }
-    resources_created_ = true;
-    return 0;
-}
-
 void VideoOutput::close()
 {
     if (!resources_created_)

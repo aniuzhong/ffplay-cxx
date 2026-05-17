@@ -127,6 +127,10 @@ public:
     void set_video_stream(int idx, AVStream *st)    { active_video_idx_    = idx; active_video_st_    = st; }
     void set_subtitle_stream(int idx, AVStream *st) { active_subtitle_idx_ = idx; active_subtitle_st_ = st; }
 
+    AVStream *active_video_stream()    const { return active_video_st_; }
+    AVStream *active_audio_stream()    const { return active_audio_st_; }
+    AVStream *active_subtitle_stream() const { return active_subtitle_st_; }
+
 private:
     void read_loop();
 

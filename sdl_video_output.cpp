@@ -20,7 +20,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "audio_output.h"
+#include "audio_device.h"
 #include "audio_visualizer.h"
 #include "frame.h"
 
@@ -177,6 +177,25 @@ SDLVideoOutput::SDLVideoOutput(SDL_Renderer *renderer, SDL_Window *window)
 SDLVideoOutput::~SDLVideoOutput()
 {
     close();
+}
+
+int SDLVideoOutput::open(int w, int h, int x, int y,
+                          const char *title, bool fullscreen)
+{
+    close();
+
+    SDL_SetWindowTitle(window_, title);
+    SDL_SetWindowSize(window_, w, h);
+    SDL_SetWindowPosition(window_, x, y);
+    SDL_SetWindowFullscreen(window_,
+        fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    SDL_ShowWindow(window_);
+
+    int ret = create_resources_impl();
+    if (ret < 0)
+        return ret;
+    resources_created_ = true;
+    return 0;
 }
 
 int SDLVideoOutput::create_resources_impl()
@@ -440,18 +459,18 @@ void SDLVideoOutput::display_image(Frame *vp, Frame *sp)
     }
 }
 
-void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioOutput *out,
+void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
                                        int64_t callback_time, bool paused)
 {
     SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 255);
     SDL_RenderClear(renderer_);
 
-    if (!vis || !out) {
+    if (!vis || !dev) {
         SDL_RenderPresent(renderer_);
         return;
     }
 
-    int channels = out->hw_params().ch_layout.nb_channels;
+    int channels = dev->hw_params().ch_layout.nb_channels;
 
     /* Snapshot ring under mutex; feed() runs on SDL audio thread. */
     vis->sync_display_ring();
@@ -459,8 +478,8 @@ void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioOutput *out,
     typedef AudioVisualizer::ShowMode ShowMode;
     if (vis->mode() == ShowMode::Waves) {
         int i_start = vis->prepare_waveform(
-            channels, out->write_buf_size(), callback_time,
-            out->hw_params().freq, paused, layout_.w);
+            channels, dev->write_buf_size(), callback_time,
+            dev->hw_params().freq, paused, layout_.w);
 
         int nb_display_channels = channels;
         int h = layout_.h / nb_display_channels;
@@ -494,8 +513,8 @@ void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioOutput *out,
         }
     } else {
         if (vis->prepare_spectrum_column(
-                channels, out->write_buf_size(), callback_time,
-                out->hw_params().freq, paused,
+                channels, dev->write_buf_size(), callback_time,
+                dev->hw_params().freq, paused,
                 layout_.w, layout_.h) < 0) {
             vis->set_mode(ShowMode::Waves);
             SDL_RenderPresent(renderer_);
