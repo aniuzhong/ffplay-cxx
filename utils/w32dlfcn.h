@@ -20,13 +20,13 @@
 #define COMPAT_W32DLFCN_H
 
 #ifdef _WIN32
-#include <stdint.h>
-
 #include <windows.h>
 
-#include "config.h"
-#include "libavutil/macros.h"
-#include "libavutil/mem.h"
+#include <stdint.h>
+
+#include <libavutil/macros.h>
+#include <libavutil/mem.h>
+
 #include "wchar_filename.h"
 
 static inline wchar_t *get_module_filename(HMODULE module)

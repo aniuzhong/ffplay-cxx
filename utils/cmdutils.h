@@ -23,15 +23,14 @@
 #define FFTOOLS_CMDUTILS_H
 
 #include <stdint.h>
-#include "config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "libavcodec/avcodec.h"
-#include "libavfilter/avfilter.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
+#include <libavcodec/avcodec.h>
+#include <libavfilter/avfilter.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
 #ifdef __cplusplus
 }
 

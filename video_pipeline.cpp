@@ -26,7 +26,7 @@ extern "C" {
 #include "player.h"
 #include "video_output.h"
 
-#include "config.h"
+
 
 // v1 globals — v2 moves to PlayerConfig
 extern int framedrop;
@@ -188,7 +188,9 @@ static int configure_video_filters(AVFilterGraph *graph,
     par->sample_aspect_ratio = codecpar->sample_aspect_ratio;
     par->color_space         = frame->colorspace;
     par->color_range         = frame->color_range;
+#if LIBAVFILTER_VERSION_MAJOR >= 12
     par->alpha_mode          = frame->alpha_mode;
+#endif
     par->frame_rate          = fr;
     par->hw_frames_ctx       = frame->hw_frames_ctx;
     ret = av_buffersrc_parameters_set(fsrc, par);
@@ -210,6 +212,7 @@ static int configure_video_filters(AVFilterGraph *graph,
                                     AV_OPT_TYPE_INT, cs.data())) < 0)
             goto fail;
     }
+#if LIBAVUTIL_VERSION_MAJOR >= 61
     {
         const auto &am = vout->supported_alpha_modes();
         if ((ret = av_opt_set_array(fout, "alphamodes", AV_OPT_SEARCH_CHILDREN,
@@ -217,6 +220,7 @@ static int configure_video_filters(AVFilterGraph *graph,
                                     AV_OPT_TYPE_INT, am.data())) < 0)
             goto fail;
     }
+#endif
 
     ret = avfilter_init_dict(fout, nullptr);
     if (ret < 0) goto fail;

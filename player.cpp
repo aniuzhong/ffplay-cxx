@@ -29,7 +29,7 @@ extern "C" {
 #include "packet_queue.h"
 #include "video_output.h"
 
-#include "config.h"
+
 #include "utils/cmdutils.h"
 
 // ==========================================================================

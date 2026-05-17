@@ -67,10 +67,12 @@ int kColorSpaces[] = {
     AVCOL_SPC_SMPTE170M,
 };
 
+#if LIBAVUTIL_VERSION_MAJOR >= 61
 int kAlphaModes[] = {
     AVALPHA_MODE_UNSPECIFIED,
     AVALPHA_MODE_STRAIGHT,
 };
+#endif
 
 } // namespace
 
@@ -125,10 +127,12 @@ const std::vector<int> &SDLVideoOutput::supported_color_spaces() const
 const std::vector<int> &SDLVideoOutput::supported_alpha_modes() const
 {
     static std::vector<int> v;
+#if LIBAVUTIL_VERSION_MAJOR >= 61
     if (v.empty()) {
         for (auto am : kAlphaModes)
             v.push_back(am);
     }
+#endif
     return v;
 }
 

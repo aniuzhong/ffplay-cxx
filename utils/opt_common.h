@@ -21,8 +21,6 @@
 #ifndef FFTOOLS_OPT_COMMON_H
 #define FFTOOLS_OPT_COMMON_H
 
-#include "config.h"
-
 #include "cmdutils.h"
 
 #ifdef __cplusplus

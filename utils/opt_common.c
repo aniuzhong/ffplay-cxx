@@ -18,49 +18,43 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "config.h"
-
 #include <stdio.h>
+
+#include <libavutil/avassert.h>
+#include <libavutil/avstring.h>
+#include <libavutil/bprint.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/cpu.h>
+#include <libavutil/dict.h>
+#include <libavutil/error.h>
+#include <libavutil/ffversion.h>
+#include <libavutil/log.h>
+#include <libavutil/mem.h>
+#include <libavutil/parseutils.h>
+#include <libavutil/pixdesc.h>
+#include <libavutil/version.h>
+#include <libavcodec/avcodec.h>
+#include <libavcodec/bsf.h>
+#include <libavcodec/codec.h>
+#include <libavcodec/codec_desc.h>
+#include <libavcodec/version.h>
+#include <libavformat/avformat.h>
+#include <libavformat/version.h>
+#include <libavdevice/avdevice.h>
+#include <libavdevice/version.h>
+#include <libavfilter/avfilter.h>
+#include <libavfilter/version.h>
+#include <libswscale/swscale.h>
+#include <libswscale/version.h>
+#include <libswresample/swresample.h>
+#include <libswresample/version.h>
 
 #include "cmdutils.h"
 #include "fopen_utf8.h"
 #include "opt_common.h"
 
-#include "libavutil/avassert.h"
-#include "libavutil/avstring.h"
-#include "libavutil/bprint.h"
-#include "libavutil/channel_layout.h"
-#include "libavutil/cpu.h"
-#include "libavutil/dict.h"
-#include "libavutil/error.h"
-#include "libavutil/ffversion.h"
-#include "libavutil/log.h"
-#include "libavutil/mem.h"
-#include "libavutil/parseutils.h"
-#include "libavutil/pixdesc.h"
-#include "libavutil/version.h"
-
-#include "libavcodec/avcodec.h"
-#include "libavcodec/bsf.h"
-#include "libavcodec/codec.h"
-#include "libavcodec/codec_desc.h"
-#include "libavcodec/version.h"
-
-#include "libavformat/avformat.h"
-#include "libavformat/version.h"
-
-#include "libavdevice/avdevice.h"
-#include "libavdevice/version.h"
-
-#include "libavfilter/avfilter.h"
-#include "libavfilter/version.h"
-
-#include "libswscale/swscale.h"
-#include "libswscale/version.h"
-
-#include "libswresample/swresample.h"
-#include "libswresample/version.h"
-
+#define CC_IDENT             ""   // compiler identification string
+#define FFMPEG_CONFIGURATION ""   // not tracked at compile time
 
 enum show_muxdemuxers {
     SHOW_DEFAULT,
@@ -238,9 +232,9 @@ void show_banner(int argc, char **argv, const OptionDef *options)
     if (hide_banner || idx)
         return;
 
-    print_program_info (INDENT|SHOW_COPYRIGHT, AV_LOG_INFO);
-    print_all_libs_info(INDENT|SHOW_CONFIG,  AV_LOG_INFO);
-    print_all_libs_info(INDENT|SHOW_VERSION, AV_LOG_INFO);
+    // print_program_info (INDENT|SHOW_COPYRIGHT, AV_LOG_INFO);
+    // print_all_libs_info(INDENT|SHOW_CONFIG,  AV_LOG_INFO);
+    // print_all_libs_info(INDENT|SHOW_VERSION, AV_LOG_INFO);
 }
 
 int show_version(void *optctx, const char *opt, const char *arg)

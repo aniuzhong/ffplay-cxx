@@ -21,10 +21,10 @@
 
 #ifdef _WIN32
 
+#include <windows.h>
 #include <errno.h>
 #include <stddef.h>
-#include <windows.h>
-#include "libavutil/mem.h"
+#include <libavutil/mem.h>
 
 av_warn_unused_result
 static inline int utf8towchar(const char *filename_utf8, wchar_t **filename_w)

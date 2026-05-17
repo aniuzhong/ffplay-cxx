@@ -19,6 +19,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -29,28 +33,30 @@
    Studio) will not omit unused inline functions and create undefined
    references to libraries that are not being built. */
 
-#include "config.h"
-#include "va_copy.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
-#include "libswresample/swresample.h"
-#include "libavutil/avassert.h"
-#include "libavutil/avstring.h"
-#include "libavutil/bprint.h"
-#include "libavutil/display.h"
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+#include <libavutil/avassert.h>
+#include <libavutil/avstring.h>
+#include <libavutil/bprint.h>
+#include <libavutil/display.h>
+#include <libavutil/mem.h>
+#include <libavutil/parseutils.h>
+#include <libavutil/eval.h>
+#include <libavutil/dict.h>
+#include <libavutil/opt.h>
+
 #include "getenv_utf8.h"
-#include "libavutil/mem.h"
-#include "libavutil/parseutils.h"
-#include "libavutil/eval.h"
-#include "libavutil/dict.h"
-#include "libavutil/opt.h"
 #include "cmdutils.h"
 #include "fopen_utf8.h"
 #include "opt_common.h"
+#include "va_copy.h"
+
 #ifdef _WIN32
-#include <windows.h>
 #include "w32dlfcn.h"
 #endif
+
+#define FFMPEG_DATADIR "." // preset file search path
 
 AVDictionary *sws_dict;
 AVDictionary *swr_opts;

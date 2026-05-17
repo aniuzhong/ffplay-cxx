@@ -57,19 +57,17 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 }
 
+#include "audio_output.h"
+#include "audio_visualizer.h"
 #include "avsync_type.h"
-#include "config.h"
-#include "config_components.h"
-#include "packet_queue.h"
 #include "clock.h"
+#include "decoder.h"
 #include "demuxer.h"
 #include "frame.h"
 #include "frame_queue.h"
-#include "audio_output.h"
-#include "audio_visualizer.h"
-#include "decoder.h"
 #include "video_output.h"
 #include "sdl_video_output.h"
+#include "packet_queue.h"
 #include "player.h"
 #include "utils/cmdutils.h"
 #include "utils/opt_common.h"
