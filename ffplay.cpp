@@ -624,8 +624,22 @@ static void event_loop_player(Player *p)
                 p->dmx()->seek((int64_t)(size * x / p->videoDevice()->width()),
                                0, AVSEEK_FLAG_BYTE);
             } else {
-                double frac = x / p->videoDevice()->width();
-                int64_t ts = (int64_t)(frac * p->dmx()->ic()->duration);
+                AVFormatContext *ic = p->dmx()->ic();
+                double frac = x / (double)p->videoDevice()->width();
+                int64_t tns = ic->duration / 1000000LL;
+                int thh = (int)(tns / 3600);
+                int tmm = (int)((tns % 3600) / 60);
+                int tss = (int)(tns % 60);
+                int ns = (int)(frac * tns);
+                int hh = ns / 3600;
+                int mm = (ns % 3600) / 60;
+                int ss = ns % 60;
+                av_log(nullptr, AV_LOG_INFO,
+                       "Seek to %2.0f%% (%2d:%02d:%02d) of total duration (%2d:%02d:%02d)       \n",
+                       frac * 100, hh, mm, ss, thh, tmm, tss);
+                int64_t ts = (int64_t)(frac * ic->duration);
+                if (ic->start_time != AV_NOPTS_VALUE)
+                    ts += ic->start_time;
                 p->seekTo(ts / (double)AV_TIME_BASE);
             }
             break;
