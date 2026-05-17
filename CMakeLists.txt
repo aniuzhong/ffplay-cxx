@@ -68,6 +68,8 @@ add_executable(ffplay-cpp
     utils/w32dlfcn.h
     audio_output.h
     audio_output.cpp
+    demuxer.h
+    demuxer.cpp
     audio_visualizer.h
     audio_visualizer.cpp
     packet_queue.h
