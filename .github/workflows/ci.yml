@@ -35,27 +35,6 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-  build-linux:
-    name: Linux (GCC)
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends \
-            cmake ninja-build pkg-config \
-            libavcodec-dev libavformat-dev libavfilter-dev \
-            libavdevice-dev libswscale-dev libswresample-dev libavutil-dev \
-            libsdl2-dev
-
-      - name: Configure
-        run: >
-          cmake -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DENABLE_VULKAN=OFF
-
-      - name: Build
-        run: cmake --build build
+  # Linux job pending: waiting for GitHub to add ubuntu-26.04 runner.
+  # The project requires FFmpeg 8.x APIs which are not available in
+  # ubuntu-24.04 apt repositories.
