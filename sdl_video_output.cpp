@@ -23,6 +23,7 @@ extern "C" {
 #include "audio_device.h"
 #include "audio_visualizer.h"
 #include "frame.h"
+#include "sdl_pixfmt_table.h"
 
 #ifndef USE_ONEPASS_SUBTITLE_RENDER
 #define USE_ONEPASS_SUBTITLE_RENDER 1
@@ -30,36 +31,7 @@ extern "C" {
 
 namespace {
 
-struct TextureFormatEntry {
-    int format;         // AVPixelFormat
-    Uint32 texture_fmt; // SDL_PixelFormatEnum
-};
-
 constexpr int kBgTileSize = 64;
-
-const TextureFormatEntry kTextureFormatMap[] = {
-    { AV_PIX_FMT_RGB8,           SDL_PIXELFORMAT_RGB332 },
-    { AV_PIX_FMT_RGB444,         SDL_PIXELFORMAT_RGB444 },
-    { AV_PIX_FMT_RGB555,         SDL_PIXELFORMAT_RGB555 },
-    { AV_PIX_FMT_BGR555,         SDL_PIXELFORMAT_BGR555 },
-    { AV_PIX_FMT_RGB565,         SDL_PIXELFORMAT_RGB565 },
-    { AV_PIX_FMT_BGR565,         SDL_PIXELFORMAT_BGR565 },
-    { AV_PIX_FMT_RGB24,          SDL_PIXELFORMAT_RGB24 },
-    { AV_PIX_FMT_BGR24,          SDL_PIXELFORMAT_BGR24 },
-    { AV_PIX_FMT_0RGB32,         SDL_PIXELFORMAT_RGB888 },
-    { AV_PIX_FMT_0BGR32,         SDL_PIXELFORMAT_BGR888 },
-    { AV_PIX_FMT_NE(RGB0, 0BGR), SDL_PIXELFORMAT_RGBX8888 },
-    { AV_PIX_FMT_NE(BGR0, 0RGB), SDL_PIXELFORMAT_BGRX8888 },
-    { AV_PIX_FMT_RGB32,          SDL_PIXELFORMAT_ARGB8888 },
-    { AV_PIX_FMT_RGB32_1,        SDL_PIXELFORMAT_RGBA8888 },
-    { AV_PIX_FMT_BGR32,          SDL_PIXELFORMAT_ABGR8888 },
-    { AV_PIX_FMT_BGR32_1,        SDL_PIXELFORMAT_BGRA8888 },
-    { AV_PIX_FMT_YUV420P,        SDL_PIXELFORMAT_IYUV },
-    { AV_PIX_FMT_YUYV422,        SDL_PIXELFORMAT_YUY2 },
-    { AV_PIX_FMT_UYVY422,        SDL_PIXELFORMAT_UYVY },
-};
-
-constexpr int kMapSize = FF_ARRAY_ELEMS(kTextureFormatMap);
 
 int kColorSpaces[] = {
     AVCOL_SPC_BT709,
@@ -92,7 +64,7 @@ int SDLVideoOutput::fill_buffersink_pixel_formats(enum AVPixelFormat *out,
 
     int n = 0;
     for (Uint32 i = 0; i < ri.num_texture_formats; i++) {
-        for (int j = 0; j < kMapSize; j++) {
+        for (int j = 0; j < kTextureFormatMapSize; j++) {
             if (ri.texture_formats[i] == kTextureFormatMap[j].texture_fmt) {
                 if (n < capacity)
                     out[n++] = static_cast<enum AVPixelFormat>(kTextureFormatMap[j].format);
@@ -107,7 +79,7 @@ const std::vector<int> &SDLVideoOutput::supported_pix_fmts() const
 {
     static std::vector<int> v = [] {
         std::vector<int> f;
-        for (int i = 0; i < kMapSize; i++)
+        for (int i = 0; i < kTextureFormatMapSize; i++)
             f.push_back(kTextureFormatMap[i].format);
         return f;
     }();
@@ -146,7 +118,7 @@ void SDLVideoOutput::get_pix_fmt_and_blendmode(int format, Uint32 *sdl_fmt,
         format == AV_PIX_FMT_BGR32   ||
         format == AV_PIX_FMT_BGR32_1)
         *blend = SDL_BLENDMODE_BLEND;
-    for (int i = 0; i < kMapSize; i++) {
+    for (int i = 0; i < kTextureFormatMapSize; i++) {
         if (format == kTextureFormatMap[i].format) {
             *sdl_fmt = kTextureFormatMap[i].texture_fmt;
             return;
@@ -184,7 +156,7 @@ SDLVideoOutput::~SDLVideoOutput()
 }
 
 int SDLVideoOutput::open(int w, int h, int x, int y,
-                          const char *title, bool fullscreen)
+                         const char *title, bool fullscreen)
 {
     close();
 
@@ -196,6 +168,9 @@ int SDLVideoOutput::open(int w, int h, int x, int y,
     SDL_ShowWindow(window_);
 
     int ret = create_resources_impl();
+    // Same as ffplay.c video_open / VulkanVideoOutput::open — layout size for
+    // keyboard guard in ffplay.cpp (seek, w, a, …) before first video frame.
+    set_layout(Rect{0, 0, w, h});
     if (ret < 0)
         return ret;
     resources_created_ = true;

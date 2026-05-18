@@ -21,6 +21,12 @@ void VideoOutput::close()
     resources_created_ = false;
 }
 
+void VideoOutput::set_layout(const Rect &layout)
+{
+    layout_ = layout;
+    on_layout_changed();
+}
+
 void VideoOutput::calc_display_rect(Rect *out,
                                     int scr_x, int scr_y,
                                     int scr_w, int scr_h,

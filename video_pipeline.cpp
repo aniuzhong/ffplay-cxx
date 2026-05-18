@@ -207,18 +207,22 @@ static int configure_video_filters(AVFilterGraph *graph,
         goto fail;
     {
         const auto &cs = vout->supported_color_spaces();
-        if ((ret = av_opt_set_array(fout, "colorspaces", AV_OPT_SEARCH_CHILDREN,
-                                    0, (int)cs.size(),
-                                    AV_OPT_TYPE_INT, cs.data())) < 0)
-            goto fail;
+        if (!cs.empty()) {
+            if ((ret = av_opt_set_array(fout, "colorspaces", AV_OPT_SEARCH_CHILDREN,
+                                        0, (int)cs.size(),
+                                        AV_OPT_TYPE_INT, cs.data())) < 0)
+                goto fail;
+        }
     }
 #if LIBAVUTIL_VERSION_MAJOR >= 61
     {
         const auto &am = vout->supported_alpha_modes();
-        if ((ret = av_opt_set_array(fout, "alphamodes", AV_OPT_SEARCH_CHILDREN,
-                                    0, (int)am.size(),
-                                    AV_OPT_TYPE_INT, am.data())) < 0)
-            goto fail;
+        if (!am.empty()) {
+            if ((ret = av_opt_set_array(fout, "alphamodes", AV_OPT_SEARCH_CHILDREN,
+                                        0, (int)am.size(),
+                                        AV_OPT_TYPE_INT, am.data())) < 0)
+                goto fail;
+        }
     }
 #endif
 

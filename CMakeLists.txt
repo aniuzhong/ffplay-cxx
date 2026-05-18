@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(ffplay-cpp C CXX)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -58,9 +58,50 @@ else()
     pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 endif()
 
+# ---- Vulkan / libplacebo (optional) ----
+option(ENABLE_VULKAN "Enable Vulkan renderer via libplacebo" ON)
+
+set(LIBPLACEBO_PREBUILT_ROOT "${THIRD_PARTY_DIR}/libplacebo-360-prebuilt"
+    CACHE PATH "Prebuilt libplacebo root (include/, lib/, bin/)")
+
+if(ENABLE_VULKAN)
+    find_path(LIBPLACEBO_INCLUDE_DIR
+        NAMES libplacebo/vulkan.h libplacebo/utils/libav.h
+        PATHS "${LIBPLACEBO_PREBUILT_ROOT}/include"
+        NO_DEFAULT_PATH)
+    find_library(LIBPLACEBO_LIBRARY
+        NAMES placebo libplacebo
+        PATHS "${LIBPLACEBO_PREBUILT_ROOT}/lib"
+        NO_DEFAULT_PATH)
+
+    find_package(Vulkan QUIET)
+
+    if(LIBPLACEBO_INCLUDE_DIR AND LIBPLACEBO_LIBRARY AND Vulkan_FOUND)
+        set(HAVE_VULKAN_RENDERER 1)
+        message(STATUS "Vulkan renderer: enabled")
+        message(STATUS "  libplacebo include: ${LIBPLACEBO_INCLUDE_DIR}")
+        message(STATUS "  libplacebo lib:     ${LIBPLACEBO_LIBRARY}")
+        message(STATUS "  Vulkan lib:         ${Vulkan_LIBRARY}")
+    else()
+        set(HAVE_VULKAN_RENDERER 0)
+        if(NOT LIBPLACEBO_INCLUDE_DIR)
+            message(STATUS "Vulkan renderer: disabled (libplacebo headers not found in ${LIBPLACEBO_PREBUILT_ROOT}/include)")
+        elseif(NOT LIBPLACEBO_LIBRARY)
+            message(STATUS "Vulkan renderer: disabled (libplacebo library not found in ${LIBPLACEBO_PREBUILT_ROOT}/lib)")
+        else()
+            message(STATUS "Vulkan renderer: disabled (Vulkan SDK not found)")
+        endif()
+    endif()
+else()
+    set(HAVE_VULKAN_RENDERER 0)
+    message(STATUS "Vulkan renderer: disabled (ENABLE_VULKAN=OFF)")
+endif()
+
 # ---- ffplay executable ----
 add_executable(ffplay
     ffplay.cpp
+    vulkan_video_output_impl.h
+    vulkan_video_output_impl.c
     utils/cmdutils.c
     utils/opt_common.c
     utils/getenv_utf8.h
@@ -101,6 +142,12 @@ add_executable(ffplay
     subtitle_pipeline.h
     subtitle_pipeline.cpp)
 
+if(HAVE_VULKAN_RENDERER)
+    target_sources(ffplay PRIVATE
+        vulkan_video_output.h
+        vulkan_video_output.cpp)
+endif()
+
 # ---- Compile definitions (replaces the old config.h mechanism) ------------
 # Always-on FFmpeg components required by ffplay
 target_compile_definitions(ffplay PRIVATE
@@ -119,6 +166,12 @@ target_compile_definitions(ffplay PRIVATE
     CONFIG_LGPLV3=0           # LGPLv2.1+ (falls to else branch)
     CONFIG_THIS_YEAR=2026     # copyright end-year
 )
+
+if(HAVE_VULKAN_RENDERER)
+    target_compile_definitions(ffplay PRIVATE
+        CONFIG_LIBPLACEBO=1
+        HAVE_VULKAN_RENDERER=1)
+endif()
 
 if(WIN32)
     target_compile_definitions(ffplay PRIVATE
@@ -139,7 +192,8 @@ if(WIN32)
         "${CMAKE_SOURCE_DIR}"
         "${CMAKE_SOURCE_DIR}/utils"
         "${CMAKE_SOURCE_DIR}/shim/include"
-        "${FFMPEG_PREBUILT_ROOT}/include")
+        "${FFMPEG_PREBUILT_ROOT}/include"
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_INCLUDE_DIR}>)
     target_link_libraries(ffplay PRIVATE
         ${_ff_lib_avutil}
         ${_ff_lib_avcodec}
@@ -149,14 +203,19 @@ if(WIN32)
         ${_ff_lib_swscale}
         ${_ff_lib_swresample}
         SDL2::SDL2
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_LIBRARY}>
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:Vulkan::Vulkan>
         shell32 comdlg32)
 else()
     target_include_directories(ffplay PRIVATE
         "${CMAKE_SOURCE_DIR}"
-        "${CMAKE_SOURCE_DIR}/utils")
+        "${CMAKE_SOURCE_DIR}/utils"
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_INCLUDE_DIR}>)
     target_link_libraries(ffplay PRIVATE
         PkgConfig::FFMPEG
-        PkgConfig::SDL2)
+        PkgConfig::SDL2
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_LIBRARY}>
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:Vulkan::Vulkan>)
 endif()
 
 if(MSVC)
@@ -190,6 +249,16 @@ if(WIN32)
     if(EXISTS "${FFMPEG_PREBUILT_ROOT}/bin")
         file(GLOB _ff_dlls LIST_DIRECTORIES false "${FFMPEG_PREBUILT_ROOT}/bin/*.dll")
         foreach(_d IN LISTS _ff_dlls)
+            add_custom_command(TARGET ffplay POST_BUILD
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_d}" "${_out}/"
+                VERBATIM)
+        endforeach()
+    endif()
+
+    # libplacebo DLL
+    if(HAVE_VULKAN_RENDERER AND EXISTS "${LIBPLACEBO_PREBUILT_ROOT}/bin")
+        file(GLOB _pl_dlls LIST_DIRECTORIES false "${LIBPLACEBO_PREBUILT_ROOT}/bin/*.dll")
+        foreach(_d IN LISTS _pl_dlls)
             add_custom_command(TARGET ffplay POST_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_d}" "${_out}/"
                 VERBATIM)

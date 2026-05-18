@@ -12,6 +12,7 @@ extern "C" {
 #include "video_types.h"
 
 struct AVFrame;
+struct AVBufferRef;
 struct Frame;
 class AudioVisualizer;
 class AudioDevice;
@@ -22,17 +23,14 @@ public:
     VideoOutput(const VideoOutput &) = delete;
     VideoOutput &operator=(const VideoOutput &) = delete;
 
-    // Idempotent — safe to call multiple times. Subclasses implement the full
-    // window + resource creation sequence.
+    // Idempotent — safe to call multiple times.
     virtual int open(int w, int h, int x, int y,
                      const char *title, bool fullscreen) = 0;
 
-    // Non-virtual template method.  Calls release_resources_impl() if
-    // resources have been created.  Safe to call multiple times.
     void close();
 
-    // Update the layout rectangle (e.g. after window resize).
-    void set_layout(const Rect &layout) { layout_ = layout; }
+    // Update layout (e.g. after window resize).
+    void set_layout(const Rect &layout);
 
     // Each implementation is responsible for its own Clear + Present.
     virtual void display(Frame *vp, Frame *sp) = 0;
@@ -47,9 +45,8 @@ public:
     virtual const std::vector<int> &supported_alpha_modes()   const = 0;
 
     // Intersection of decoder pixel formats the *this* backend can upload to
-    // its display path (e.g. SDL texture formats vs AV_PIX_FMT_*).
-    // Writes at most `capacity` entries into `out`; returns count written, or
-    // a negative AVERROR on failure. Implementations must not write past `out`.
+    // its display path. Writes at most `capacity` entries into `out`; returns
+    // count written, or a negative AVERROR on failure.
     virtual int fill_buffersink_pixel_formats(enum AVPixelFormat *out,
                                               int capacity) const = 0;
 
@@ -65,18 +62,20 @@ public:
     int width()  const { return layout_.w; }
     int height() const { return layout_.h; }
 
+    // HW device reference for derived hwaccel contexts (Vulkan path).
+    // Returns nullptr for SDL path (standalone hwaccel).
+    virtual AVBufferRef *hw_device_ref() const { return nullptr; }
+
 protected:
     explicit VideoOutput(SDL_Window *window);
     SDL_Window *const window_;
 
-    // On success set resources_created_ = true, return 0.
-    // On failure clean up any partially-allocated state internally,
-    // leave resources_created_ = false, return -1.
     virtual int create_resources_impl() = 0;
-
-    // Must be nullptr-safe and idempotent (callable on partially-
-    // initialised or already-released state).
     virtual void release_resources_impl() = 0;
+
+    // Hook called after layout_ is updated. Subclasses override to sync
+    // GPU resources (e.g. Vulkan swapchain resize).
+    virtual void on_layout_changed() {}
 
     bool resources_created_ = false;
 

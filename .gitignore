@@ -2,4 +2,5 @@ build/
 tmp/
 third_party/.cache
 third_party/ffmpeg-8.1-full_build-shared/
-third_party/SDL2-2.32.10
+third_party/SDL2-2.32.10/
+third_party/libplacebo-*

@@ -72,6 +72,11 @@ extern "C" {
 #include "utils/cmdutils.h"
 #include "utils/opt_common.h"
 
+#if HAVE_VULKAN_RENDERER
+#include "vulkan_video_output.h"
+#include "vulkan_video_output_impl.h"
+#endif
+
 typedef AudioVisualizer::ShowMode ShowMode;
 
 const char program_name[] = "ffplay";
@@ -166,6 +171,10 @@ static int cursor_hidden = 0;
        int filter_nbthreads = 0;
 static char *video_background = nullptr;
        const char *hwaccel = nullptr;
+#if HAVE_VULKAN_RENDERER
+static int enable_vulkan = 0;
+static char *vulkan_params = nullptr;
+#endif
 
 /* current context */
 static int is_full_screen;
@@ -176,6 +185,9 @@ constexpr Uint32 FF_QUIT_EVENT = SDL_USEREVENT + 2;
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_RendererInfo renderer_info = {0};
+#if HAVE_VULKAN_RENDERER
+static VkRenderer *vk_renderer;
+#endif
 
 static int opt_add_vfilter(void *optctx, const char *opt, const char *arg)
 {
@@ -354,6 +366,10 @@ static const OptionDef options[] = {
     { "filter_threads",     OPT_TYPE_INT,    OPT_EXPERT, { &filter_nbthreads }, "number of filter threads per graph" },
     { "video_bg",           OPT_TYPE_STRING, OPT_EXPERT, { &video_background }, "set video background for transparent videos" },
     { "hwaccel",            OPT_TYPE_STRING, OPT_EXPERT, { &hwaccel }, "use HW accelerated decoding" },
+#if HAVE_VULKAN_RENDERER
+    { "enable_vulkan",      OPT_TYPE_BOOL,            0, { &enable_vulkan }, "enable vulkan renderer" },
+    { "vulkan_params",      OPT_TYPE_STRING, OPT_EXPERT, { &vulkan_params }, "vulkan configuration using a list of key=value pairs separated by ':'" },
+#endif
     { nullptr, },
 };
 
@@ -403,6 +419,12 @@ static void do_exit_player(Player *p)
 {
     if (p) delete p;
     if (renderer) SDL_DestroyRenderer(renderer);
+#if HAVE_VULKAN_RENDERER
+    if (vk_renderer) {
+        vk_renderer_destroy(vk_renderer);
+        vk_renderer = nullptr;
+    }
+#endif
     if (window)   SDL_DestroyWindow(window);
     uninit_opts();
     for (int i = 0; i < nb_vfilters; i++)
@@ -730,6 +752,10 @@ int main(int argc, char **argv)
 #endif
         if (borderless) wflags |= SDL_WINDOW_BORDERLESS;
         else            wflags |= SDL_WINDOW_RESIZABLE;
+#if HAVE_VULKAN_RENDERER
+        if (enable_vulkan)
+            wflags |= SDL_WINDOW_VULKAN;
+#endif
 
 #ifdef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
@@ -742,23 +768,58 @@ int main(int argc, char **argv)
             av_log(nullptr, AV_LOG_FATAL, "Failed to create window: %s", SDL_GetError());
             do_exit_player(nullptr);
         }
-        renderer = SDL_CreateRenderer(window, -1,
-            SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-        if (!renderer) {
-            av_log(nullptr, AV_LOG_WARNING,
-                   "Failed to initialize a hardware accelerated renderer: %s\n",
-                   SDL_GetError());
-            renderer = SDL_CreateRenderer(window, -1, 0);
+
+#if HAVE_VULKAN_RENDERER
+        if (enable_vulkan) {
+            // Vulkan path: create VkRenderer, no SDL_Renderer.
+            vk_renderer = vk_get_renderer();
+            if (vk_renderer) {
+                AVDictionary *vk_dict = nullptr;
+                if (vulkan_params) {
+                    int ret = av_dict_parse_string(&vk_dict, vulkan_params, "=", ":", 0);
+                    if (ret < 0) {
+                        av_log(nullptr, AV_LOG_FATAL,
+                               "Failed to parse vulkan_params: %s\n", vulkan_params);
+                        do_exit_player(nullptr);
+                    }
+                }
+                int ret = vk_renderer_create(vk_renderer, window, vk_dict);
+                av_dict_free(&vk_dict);
+                if (ret < 0) {
+                    av_log(nullptr, AV_LOG_WARNING,
+                           "Failed to create vulkan renderer: %s, "
+                           "falling back to SDL renderer\n", av_err2str(ret));
+                    vk_renderer = nullptr;
+                    enable_vulkan = 0;
+                }
+            } else {
+                av_log(nullptr, AV_LOG_WARNING,
+                       "Vulkan renderer not available, "
+                       "falling back to SDL renderer\n");
+                enable_vulkan = 0;
+            }
         }
-        if (renderer) {
-            if (!SDL_GetRendererInfo(renderer, &renderer_info))
-                av_log(nullptr, AV_LOG_VERBOSE,
-                       "Initialized %s renderer.\n", renderer_info.name);
-        }
-        if (!renderer || !renderer_info.num_texture_formats) {
-            av_log(nullptr, AV_LOG_FATAL,
-                   "Failed to create window or renderer: %s", SDL_GetError());
-            do_exit_player(nullptr);
+        if (!enable_vulkan)
+#endif
+        {
+            renderer = SDL_CreateRenderer(window, -1,
+                SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+            if (!renderer) {
+                av_log(nullptr, AV_LOG_WARNING,
+                       "Failed to initialize a hardware accelerated renderer: %s\n",
+                       SDL_GetError());
+                renderer = SDL_CreateRenderer(window, -1, 0);
+            }
+            if (renderer) {
+                if (!SDL_GetRendererInfo(renderer, &renderer_info))
+                    av_log(nullptr, AV_LOG_VERBOSE,
+                           "Initialized %s renderer.\n", renderer_info.name);
+            }
+            if (!renderer || !renderer_info.num_texture_formats) {
+                av_log(nullptr, AV_LOG_FATAL,
+                       "Failed to create window or renderer: %s", SDL_GetError());
+                do_exit_player(nullptr);
+            }
         }
     }
 
@@ -766,7 +827,14 @@ int main(int argc, char **argv)
     p = new Player();
     p->setDataSource(input_filename, file_iformat);
 
-    auto *video_dev = new SDLVideoOutput(renderer, window);
+    VideoOutput *video_dev = nullptr;
+#if HAVE_VULKAN_RENDERER
+    if (enable_vulkan && vk_renderer)
+        video_dev = new VulkanVideoOutput(window, vk_renderer);
+    else
+#endif
+        video_dev = new SDLVideoOutput(renderer, window);
+
     auto *audio_dev = new AudioOutput();
 
     if (display_disable)

@@ -11,6 +11,9 @@ set(FFPLAY_FFMPEG_PREBUILT_URL
 set(FFPLAY_SDL2_DEV_ZIP_URL
     "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-devel-2.32.10-VC.zip"
     CACHE STRING "URL for SDL2 MSVC development package (.zip)")
+set(FFPLAY_LIBPLACEBO_PREBUILT_URL
+    "https://github.com/aniuzhong/libplacebo-prebuilt/releases/download/v0.1.1/libplacebo-360-prebuilt.zip"
+    CACHE STRING "URL for prebuilt libplacebo (.zip)")
 
 function(_ffplay_download url destfile)
     get_filename_component(_parent "${destfile}" DIRECTORY)
@@ -60,6 +63,16 @@ function(ffplay_ensure_prebuilt_deps)
             _ffplay_download("${FFPLAY_SDL2_DEV_ZIP_URL}" "${_sdl_zip}")
         endif()
         _ffplay_extract("${_sdl_zip}" "${THIRD_PARTY_DIR}")
+    endif()
+
+    # libplacebo (prebuilt)
+    set(_pl_root "${LIBPLACEBO_PREBUILT_ROOT}")
+    if(NOT EXISTS "${_pl_root}/include/libplacebo/vulkan.h")
+        set(_pl_zip "${_cache}/libplacebo-360-prebuilt.zip")
+        if(NOT EXISTS "${_pl_zip}")
+            _ffplay_download("${FFPLAY_LIBPLACEBO_PREBUILT_URL}" "${_pl_zip}")
+        endif()
+        _ffplay_extract("${_pl_zip}" "${THIRD_PARTY_DIR}")
     endif()
 endfunction()
 

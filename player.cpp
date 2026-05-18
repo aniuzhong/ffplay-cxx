@@ -7,8 +7,10 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavcodec/packet.h>
 #include <libavutil/bprint.h>
+#include <libavutil/buffer.h>
 #include <libavutil/dict.h>
 #include <libavutil/error.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/log.h>
 #include <libavutil/macros.h>
 #include <libavutil/mathematics.h>
@@ -153,7 +155,7 @@ static int stream_has_enough_packets(AVStream *st, int stream_id, PacketQueue *q
                (!queue->duration() || av_q2d(st->time_base) * queue->duration() > 1.0);
 }
 
-static int create_hwaccel(AVBufferRef **device_ctx);
+static int create_hwaccel(AVBufferRef **device_ctx, VideoOutput *vout);
 
 int Player::prepare()
 {
@@ -345,7 +347,7 @@ int Player::openStream(int stream_index)
     av_dict_set(&opts, "flags", "+copy_opaque", AV_DICT_MULTIKEY);
 
     if (avctx->codec_type == AVMEDIA_TYPE_VIDEO) {
-        ret = create_hwaccel(&avctx->hw_device_ctx);
+        ret = create_hwaccel(&avctx->hw_device_ctx, video_dev_);
         if (ret < 0) goto fail;
     }
 
@@ -1131,7 +1133,7 @@ void Player::sdlAudioCallback(void *opaque, Uint8 *stream, int len)
 //  create_hwaccel
 // ==========================================================================
 
-static int create_hwaccel(AVBufferRef **device_ctx)
+static int create_hwaccel(AVBufferRef **device_ctx, VideoOutput *vout)
 {
     *device_ctx = nullptr;
     if (!hwaccel) return 0;
@@ -1139,6 +1141,24 @@ static int create_hwaccel(AVBufferRef **device_ctx)
     AVHWDeviceType type = av_hwdevice_find_type_by_name(hwaccel);
     if (type == AV_HWDEVICE_TYPE_NONE)
         return AVERROR(ENOTSUP);
+
+    // Vulkan-derived path: share the renderer's Vulkan device for zero-copy.
+    AVBufferRef *vk_dev = vout ? vout->hw_device_ref() : nullptr;
+    if (vk_dev) {
+        int ret = av_hwdevice_ctx_create_derived(device_ctx, type, vk_dev, 0);
+        if (!ret) return 0;
+        if (ret != AVERROR(ENOSYS)) {
+            av_log(nullptr, AV_LOG_ERROR,
+                   "Failed to create derived hwaccel for %s: %s\n",
+                   hwaccel, av_err2str(ret));
+            return ret;
+        }
+        // ENOSYS: this hwaccel doesn't support Vulkan derivation,
+        // fall back to standalone device.
+        av_log(nullptr, AV_LOG_WARNING,
+               "Derive %s from vulkan not supported, "
+               "falling back to standalone device.\n", hwaccel);
+    }
 
     return av_hwdevice_ctx_create(device_ctx, type, nullptr, nullptr, 0);
 }

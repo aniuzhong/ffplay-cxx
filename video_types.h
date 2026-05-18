@@ -1,5 +1,8 @@
 #pragma once
 
+// Prevent vulkan_video_output_impl.h from redefining these types in C++ TUs.
+#define FFPLAY_RENDERER_PARAMS_DEFINED
+
 #include <cstdint>
 
 // Shared geometry and rendering parameter types.
