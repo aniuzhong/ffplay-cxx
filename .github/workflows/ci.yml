@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore third-party cache
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            third_party/.cache
+            third_party/ffmpeg-8.1-full_build-shared
+            third_party/SDL2-2.32.10
+            third_party/libplacebo-360-prebuilt
+          key: win-deps-${{ hashFiles('cmake/DownloadPrebuiltDeps.cmake') }}
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DENABLE_VULKAN=OFF
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  build-linux:
+    name: Linux (GCC)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            cmake ninja-build pkg-config \
+            libavcodec-dev libavformat-dev libavfilter-dev \
+            libavdevice-dev libswscale-dev libswresample-dev libavutil-dev \
+            libsdl2-dev
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DENABLE_VULKAN=OFF
+
+      - name: Build
+        run: cmake --build build
