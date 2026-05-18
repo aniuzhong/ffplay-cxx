@@ -1,4 +1,4 @@
-#include "audio_output.h"
+#include "sdl_audio_output.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -48,16 +48,16 @@ int audio_params_copy_from(const AudioParams *src, AudioParams *dst)
 
 } // namespace
 
-AudioOutput::AudioOutput()
+SDLAudioOutput::SDLAudioOutput()
 {
 }
 
-AudioOutput::~AudioOutput()
+SDLAudioOutput::~SDLAudioOutput()
 {
     close();
 }
 
-int AudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
+int SDLAudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
                        SDL_AudioCallback cb, void *cb_opaque)
 {
     SDL_AudioSpec wanted_spec, spec;
@@ -67,7 +67,7 @@ int AudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
     int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
 
     if (audio_dev_) {
-        av_log(nullptr, AV_LOG_ERROR, "AudioOutput::open: device already open\n");
+        av_log(nullptr, AV_LOG_ERROR, "SDLAudioOutput::open: device already open\n");
         return AVERROR(EINVAL);
     }
     audio_params_clear(&audio_src_);
@@ -173,7 +173,7 @@ int AudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
     av_channel_layout_uninit(&wanted_ch_layout);
 
     if (audio_params_copy_from(&audio_tgt_, &audio_src_) < 0) {
-        av_log(nullptr, AV_LOG_ERROR, "AudioOutput::open: failed to copy hw layout to src\n");
+        av_log(nullptr, AV_LOG_ERROR, "SDLAudioOutput::open: failed to copy hw layout to src\n");
         SDL_CloseAudioDevice(audio_dev_);
         audio_dev_ = 0;
         audio_params_clear(&audio_tgt_);
@@ -189,7 +189,7 @@ int AudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
     return audio_hw_buf_size_;
 }
 
-double AudioOutput::clock_for_set_at() const
+double SDLAudioOutput::clock_for_set_at() const
 {
     if (isnan(audio_clock_))
         return NAN;
@@ -198,7 +198,7 @@ double AudioOutput::clock_for_set_at() const
         / audio_tgt_.bytes_per_sec;
 }
 
-int AudioOutput::synchronize(int nb_samples, double sync_diff)
+int SDLAudioOutput::synchronize(int nb_samples, double sync_diff)
 {
     if (isnan(sync_diff))
         return nb_samples;
@@ -226,7 +226,7 @@ int AudioOutput::synchronize(int nb_samples, double sync_diff)
     return wanted_nb_samples;
 }
 
-int AudioOutput::decode_frame(bool paused,
+int SDLAudioOutput::decode_frame(bool paused,
                                NextAudioFrameFn next_frame,
                                const std::function<double()> &sync_diff_fn,
                                const std::function<void(const int16_t *, int)> *on_decode)
@@ -332,7 +332,7 @@ int AudioOutput::decode_frame(bool paused,
     return resampled_data_size;
 }
 
-void AudioOutput::read(uint8_t *stream, int len, bool paused,
+void SDLAudioOutput::read(uint8_t *stream, int len, bool paused,
                         NextAudioFrameFn next_frame,
                         std::function<double()> sync_diff_fn,
                         const std::function<void(const int16_t *, int)> *on_decode)
@@ -369,13 +369,13 @@ void AudioOutput::read(uint8_t *stream, int len, bool paused,
     audio_write_buf_size_ = audio_buf_size_ - audio_buf_index_;
 }
 
-void AudioOutput::unpause()
+void SDLAudioOutput::unpause()
 {
     if (audio_dev_)
         SDL_PauseAudioDevice(audio_dev_, 0);
 }
 
-void AudioOutput::close()
+void SDLAudioOutput::close()
 {
     if (audio_dev_) {
         SDL_CloseAudioDevice(audio_dev_);

@@ -130,9 +130,9 @@ add_executable(ffplay
     utils/wchar_filename.h
     utils/va_copy.h
     utils/w32dlfcn.h
+    sdl_audio_output.h
+    sdl_audio_output.cpp
     audio_output.h
-    audio_output.cpp
-    audio_device.h
     demuxer.h
     demuxer.cpp
     audio_visualizer.h
@@ -153,8 +153,8 @@ add_executable(ffplay
     sdl_video_output.cpp
     null_video_output.h
     null_video_output.cpp
-    null_audio_device.h
-    null_audio_device.cpp
+    null_audio_output.h
+    null_audio_output.cpp
     player.h
     player.cpp
     video_pipeline.h

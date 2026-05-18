@@ -16,7 +16,7 @@ int NullVideoOutput::open(int, int, int, int, const char *, bool)
 }
 
 void NullVideoOutput::display(Frame *, Frame *)              {}
-void NullVideoOutput::display_audio_vis(AudioVisualizer *, AudioDevice *,
+void NullVideoOutput::display_audio_vis(AudioVisualizer *, AudioOutput *,
                                          int64_t, bool)      {}
 void NullVideoOutput::clear_subtitle_areas(Frame *)          {}
 

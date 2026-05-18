@@ -20,7 +20,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "audio_device.h"
+#include "audio_output.h"
 #include "audio_visualizer.h"
 #include "vulkan_video_output_impl.h"
 #include "frame.h"
@@ -199,7 +199,7 @@ void VulkanVideoOutput::display(Frame *vp, Frame * /* sp unused in Vulkan path *
 //  display_audio_vis  (SDL path — from SDLVideoOutput)
 // ===========================================================================
 
-void VulkanVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
+void VulkanVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioOutput *dev,
                                            int64_t callback_time, bool paused)
 {
     if (!sdl_renderer_)

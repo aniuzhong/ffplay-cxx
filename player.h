@@ -17,7 +17,7 @@ extern "C" {
 #include "subtitle_pipeline.h"
 #include "video_pipeline.h"
 
-#include "audio_device.h"
+#include "audio_output.h"
 #include "audio_visualizer.h"
 #include "avsync_type.h"
 
@@ -69,7 +69,7 @@ public:
 
     // -- Device injection (may be nullptr for headless / no-audio) --
     void setVideoDevice(VideoOutput *dev);
-    void setAudioDevice(AudioDevice *dev);
+    void setAudioDevice(AudioOutput *dev);
 
     // -- Lifecycle --
     int  prepare();       // v1: reads ffplay.cpp globals for options
@@ -112,7 +112,7 @@ public:
     // -- Accessors for Pipeline friend access --
     Demuxer      *dmx()   const { return dmx_.get(); }
     VideoOutput  *videoDevice() const { return video_dev_; }
-    AudioDevice  *audioDevice() const { return audio_dev_; }
+    AudioOutput  *audioDevice() const { return audio_dev_; }
     int           videoFilterIndex() const { return vfilter_idx_; }
     bool          hasVideoStreamOpen() const { return video_.stream_index >= 0 && video_.decoder.has_codec(); }
     bool          hasAudioStreamOpen() const { return audio_.stream_index >= 0 && audio_.decoder.has_codec(); }
@@ -162,7 +162,7 @@ private:
     SubtitlePipeline sub_;
 
     VideoOutput *video_dev_ = nullptr;   // borrowed
-    AudioDevice *audio_dev_ = nullptr;   // borrowed
+    AudioOutput *audio_dev_ = nullptr;   // borrowed
 
     Clock audclk_;
     Clock vidclk_;

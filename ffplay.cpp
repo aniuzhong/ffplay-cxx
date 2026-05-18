@@ -57,7 +57,7 @@ extern "C" {
 #include <libavfilter/buffersrc.h>
 }
 
-#include "audio_output.h"
+#include "sdl_audio_output.h"
 #include "audio_visualizer.h"
 #include "avsync_type.h"
 #include "clock.h"
@@ -514,7 +514,7 @@ static void event_loop_player(Player *p)
                 break;
             case SDLK_KP_MULTIPLY: case SDLK_0:
                 {
-                    auto *a = dynamic_cast<AudioOutput*>(p->audioDevice());
+                    auto *a = dynamic_cast<SDLAudioOutput*>(p->audioDevice());
                     if (!a) break;
                     double vol_lvl = a->volume()
                         ? (20 * log(a->volume() / (double)SDL_MIX_MAXVOLUME) / log(10))
@@ -528,7 +528,7 @@ static void event_loop_player(Player *p)
                 break;
             case SDLK_KP_DIVIDE: case SDLK_9:
                 {
-                    auto *a = dynamic_cast<AudioOutput*>(p->audioDevice());
+                    auto *a = dynamic_cast<SDLAudioOutput*>(p->audioDevice());
                     if (!a) break;
                     double vol_lvl = a->volume()
                         ? (20 * log(a->volume() / (double)SDL_MIX_MAXVOLUME) / log(10))
@@ -835,7 +835,7 @@ int main(int argc, char **argv)
 #endif
         video_dev = new SDLVideoOutput(renderer, window);
 
-    auto *audio_dev = new AudioOutput();
+    auto *audio_dev = new SDLAudioOutput();
 
     if (display_disable)
         p->setVideoDevice(nullptr);

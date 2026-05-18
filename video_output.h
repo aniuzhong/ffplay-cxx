@@ -15,7 +15,7 @@ struct AVFrame;
 struct AVBufferRef;
 struct Frame;
 class AudioVisualizer;
-class AudioDevice;
+class AudioOutput;
 
 class VideoOutput {
 public:
@@ -34,7 +34,7 @@ public:
 
     // Each implementation is responsible for its own Clear + Present.
     virtual void display(Frame *vp, Frame *sp) = 0;
-    virtual void display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
+    virtual void display_audio_vis(AudioVisualizer *vis, AudioOutput *dev,
                                    int64_t callback_time, bool paused) = 0;
 
     // Clear expired subtitle texture areas.

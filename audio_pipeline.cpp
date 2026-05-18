@@ -218,7 +218,7 @@ int AudioPipeline::configureFilters(const char *af, bool force_output,
 }
 
 // ==========================================================================
-//  fill() — stub for now (AudioOutput::read() still handles decode+sync)
+//  fill() — stub for now (SDLAudioOutput::read() still handles decode+sync)
 // ==========================================================================
 
 int AudioPipeline::fill(uint8_t *, int, bool,
@@ -226,7 +226,7 @@ int AudioPipeline::fill(uint8_t *, int, bool,
                          Frame *(*)(void *), void *,
                          const std::function<void(const int16_t *, int)> *)
 {
-    // TODO: move decode+sync logic from AudioOutput into this method
+    // TODO: move decode+sync logic from SDLAudioOutput into this method
     return -1;
 }
 

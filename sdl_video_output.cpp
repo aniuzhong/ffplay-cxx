@@ -20,7 +20,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "audio_device.h"
+#include "audio_output.h"
 #include "audio_visualizer.h"
 #include "frame.h"
 #include "sdl_pixfmt_table.h"
@@ -438,7 +438,7 @@ void SDLVideoOutput::display_image(Frame *vp, Frame *sp)
     }
 }
 
-void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioDevice *dev,
+void SDLVideoOutput::display_audio_vis(AudioVisualizer *vis, AudioOutput *dev,
                                        int64_t callback_time, bool paused)
 {
     SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 255);

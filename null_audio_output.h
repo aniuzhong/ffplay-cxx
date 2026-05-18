@@ -1,8 +1,8 @@
 #pragma once
 
-#include "audio_device.h"
+#include "audio_output.h"
 
-class NullAudioDevice : public AudioDevice {
+class NullAudioOutput : public AudioOutput {
 public:
     int  open(const AVChannelLayout *, int, SDL_AudioCallback, void *) override;
     void close() override;

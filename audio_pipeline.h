@@ -11,7 +11,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-#include "audio_device.h"
+#include "audio_output.h"
 #include "decoder.h"
 #include "frame.h"
 

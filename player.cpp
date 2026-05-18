@@ -23,7 +23,7 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 }
 
-#include "audio_output.h"
+#include "sdl_audio_output.h"
 #include "clock.h"
 #include "decoder.h"
 #include "demuxer.h"
@@ -122,7 +122,7 @@ void Player::setVideoDevice(VideoOutput *dev)
     video_dev_ = dev;
 }
 
-void Player::setAudioDevice(AudioDevice *dev)
+void Player::setAudioDevice(AudioOutput *dev)
 {
     audio_dev_ = dev;
 }
@@ -1089,10 +1089,10 @@ void Player::sdlAudioCallback(void *opaque, Uint8 *stream, int len)
 
     if (!p->audio_dev_) return;
 
-    // For now, delegate to AudioOutput::read() directly.
+    // For now, delegate to SDLAudioOutput::read() directly.
     // TODO: replace with AudioPipeline::fill() once decode+sync migrate.
-    AudioDevice *dev = p->audio_dev_;
-    if (auto *aout = dynamic_cast<AudioOutput *>(dev)) {
+    AudioOutput *dev = p->audio_dev_;
+    if (auto *aout = dynamic_cast<SDLAudioOutput *>(dev)) {
         // Use the existing read path
         auto next_frame = [&]() -> Frame * {
             Frame *af = nullptr;

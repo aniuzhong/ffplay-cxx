@@ -1,81 +1,36 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 
 extern "C" {
+#include <libavutil/channel_layout.h>
+#include <libavutil/samplefmt.h>
 #include <SDL.h>
 }
 
-#include "audio_device.h"
-#include "frame.h"
+struct AudioParams {
+    int freq = 0;
+    AVChannelLayout ch_layout = {};
+    AVSampleFormat fmt = AV_SAMPLE_FMT_NONE;
+    int frame_size = 0;
+    int bytes_per_sec = 0;
+};
 
-struct AVFrame;
-struct SwrContext;
-
-using NextAudioFrameFn = std::function<Frame *()>;
-
-class AudioOutput : public AudioDevice {
+class AudioOutput {
 public:
-    AudioOutput();
-    ~AudioOutput();
+    virtual ~AudioOutput() = default;
 
-    AudioOutput(const AudioOutput &) = delete;
-    AudioOutput &operator=(const AudioOutput &) = delete;
+    virtual int  open(const AVChannelLayout *ch_layout, int sample_rate,
+                      SDL_AudioCallback cb, void *opaque) = 0;
+    virtual void close() = 0;
+    virtual void unpause() = 0;
 
-    // -- AudioDevice overrides --
-    int  open(const AVChannelLayout *ch_layout, int sample_rate,
-              SDL_AudioCallback cb, void *cb_opaque) override;
-    void close() override;
-    void unpause() override;
+    virtual int  volume() const = 0;
+    virtual void set_volume(int vol) = 0;
+    virtual bool muted() const = 0;
+    virtual void toggle_mute() = 0;
 
-    int  volume()       const override { return audio_volume_; }
-    void set_volume(int vol) override { audio_volume_ = vol; }
-    bool muted()        const override { return muted_; }
-    void toggle_mute()        override { muted_ = !muted_; }
-
-    int  hw_buf_size()  const override { return audio_hw_buf_size_; }
-    int  write_buf_size() const override { return audio_write_buf_size_; }
-    const AudioParams &hw_params() const override { return audio_tgt_; }
-
-    // -- Methods used by sdl_audio_callback (to be moved into AudioPipeline later) --
-    void read(uint8_t *stream, int len, bool paused,
-              NextAudioFrameFn next_frame,
-              std::function<double()> sync_diff_fn,
-              const std::function<void(const int16_t *, int)> *on_decode = nullptr);
-
-    double clock_for_set_at() const;
-    double clock() const { return audio_clock_; }
-    int clock_serial() const { return audio_clock_serial_; }
-
-private:
-    int decode_frame(bool paused,
-                     NextAudioFrameFn next_frame,
-                     const std::function<double()> &sync_diff_fn,
-                     const std::function<void(const int16_t *, int)> *on_decode);
-    int synchronize(int nb_samples, double sync_diff);
-
-    SDL_AudioDeviceID audio_dev_ = 0;
-
-    AudioParams audio_src_;
-    AudioParams audio_tgt_;
-    SwrContext *swr_ctx_ = nullptr;
-
-    uint8_t *audio_buf_ = nullptr;
-    uint8_t *audio_buf1_ = nullptr;
-    unsigned audio_buf_size_ = 0;
-    unsigned audio_buf1_size_ = 0;
-    int audio_buf_index_ = 0;
-    int audio_write_buf_size_ = 0;
-    int audio_hw_buf_size_ = 0;
-
-    int audio_volume_ = 0;
-    int muted_ = 0;
-
-    double audio_clock_ = NAN;
-    int audio_clock_serial_ = -1;
-    double audio_diff_cum_ = 0;
-    double audio_diff_avg_coef_ = 0;
-    double audio_diff_threshold_ = 0;
-    int audio_diff_avg_count_ = 0;
+    virtual int  hw_buf_size() const = 0;
+    virtual int  write_buf_size() const = 0;
+    virtual const AudioParams &hw_params() const = 0;
 };
