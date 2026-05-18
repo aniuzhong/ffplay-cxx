@@ -61,35 +61,57 @@ endif()
 # ---- Vulkan / libplacebo (optional) ----
 option(ENABLE_VULKAN "Enable Vulkan renderer via libplacebo" ON)
 
-set(LIBPLACEBO_PREBUILT_ROOT "${THIRD_PARTY_DIR}/libplacebo-360-prebuilt"
-    CACHE PATH "Prebuilt libplacebo root (include/, lib/, bin/)")
+if(WIN32)
+    set(LIBPLACEBO_PREBUILT_ROOT "${THIRD_PARTY_DIR}/libplacebo-360-prebuilt"
+        CACHE PATH "Prebuilt libplacebo root (include/, lib/, bin/)")
+endif()
 
 if(ENABLE_VULKAN)
-    find_path(LIBPLACEBO_INCLUDE_DIR
-        NAMES libplacebo/vulkan.h libplacebo/utils/libav.h
-        PATHS "${LIBPLACEBO_PREBUILT_ROOT}/include"
-        NO_DEFAULT_PATH)
-    find_library(LIBPLACEBO_LIBRARY
-        NAMES placebo libplacebo
-        PATHS "${LIBPLACEBO_PREBUILT_ROOT}/lib"
-        NO_DEFAULT_PATH)
+    if(WIN32)
+        find_path(LIBPLACEBO_INCLUDE_DIR
+            NAMES libplacebo/vulkan.h libplacebo/utils/libav.h
+            PATHS "${LIBPLACEBO_PREBUILT_ROOT}/include"
+            NO_DEFAULT_PATH)
+        find_library(LIBPLACEBO_LIBRARY
+            NAMES placebo libplacebo
+            PATHS "${LIBPLACEBO_PREBUILT_ROOT}/lib"
+            NO_DEFAULT_PATH)
 
-    find_package(Vulkan QUIET)
+        find_package(Vulkan QUIET)
 
-    if(LIBPLACEBO_INCLUDE_DIR AND LIBPLACEBO_LIBRARY AND Vulkan_FOUND)
-        set(HAVE_VULKAN_RENDERER 1)
-        message(STATUS "Vulkan renderer: enabled")
-        message(STATUS "  libplacebo include: ${LIBPLACEBO_INCLUDE_DIR}")
-        message(STATUS "  libplacebo lib:     ${LIBPLACEBO_LIBRARY}")
-        message(STATUS "  Vulkan lib:         ${Vulkan_LIBRARY}")
-    else()
-        set(HAVE_VULKAN_RENDERER 0)
-        if(NOT LIBPLACEBO_INCLUDE_DIR)
-            message(STATUS "Vulkan renderer: disabled (libplacebo headers not found in ${LIBPLACEBO_PREBUILT_ROOT}/include)")
-        elseif(NOT LIBPLACEBO_LIBRARY)
-            message(STATUS "Vulkan renderer: disabled (libplacebo library not found in ${LIBPLACEBO_PREBUILT_ROOT}/lib)")
+        if(LIBPLACEBO_INCLUDE_DIR AND LIBPLACEBO_LIBRARY AND Vulkan_FOUND)
+            set(HAVE_VULKAN_RENDERER 1)
+            message(STATUS "Vulkan renderer: enabled")
+            message(STATUS "  libplacebo include: ${LIBPLACEBO_INCLUDE_DIR}")
+            message(STATUS "  libplacebo lib:     ${LIBPLACEBO_LIBRARY}")
+            message(STATUS "  Vulkan lib:         ${Vulkan_LIBRARY}")
         else()
-            message(STATUS "Vulkan renderer: disabled (Vulkan SDK not found)")
+            set(HAVE_VULKAN_RENDERER 0)
+            if(NOT LIBPLACEBO_INCLUDE_DIR)
+                message(STATUS "Vulkan renderer: disabled (libplacebo headers not found in ${LIBPLACEBO_PREBUILT_ROOT}/include)")
+            elseif(NOT LIBPLACEBO_LIBRARY)
+                message(STATUS "Vulkan renderer: disabled (libplacebo library not found in ${LIBPLACEBO_PREBUILT_ROOT}/lib)")
+            else()
+                message(STATUS "Vulkan renderer: disabled (Vulkan SDK not found)")
+            endif()
+        endif()
+    else()
+        # Linux / Unix: use pkg-config for libplacebo and Vulkan
+        pkg_check_modules(LIBPLACEBO QUIET IMPORTED_TARGET libplacebo)
+        find_package(Vulkan QUIET)
+
+        if(LIBPLACEBO_FOUND AND Vulkan_FOUND)
+            set(HAVE_VULKAN_RENDERER 1)
+            message(STATUS "Vulkan renderer: enabled")
+            message(STATUS "  libplacebo version: ${LIBPLACEBO_VERSION}")
+            message(STATUS "  Vulkan lib:         ${Vulkan_LIBRARY}")
+        else()
+            set(HAVE_VULKAN_RENDERER 0)
+            if(NOT LIBPLACEBO_FOUND)
+                message(STATUS "Vulkan renderer: disabled (libplacebo not found via pkg-config)")
+            else()
+                message(STATUS "Vulkan renderer: disabled (Vulkan SDK not found)")
+            endif()
         endif()
     endif()
 else()
@@ -209,12 +231,11 @@ if(WIN32)
 else()
     target_include_directories(ffplay PRIVATE
         "${CMAKE_SOURCE_DIR}"
-        "${CMAKE_SOURCE_DIR}/utils"
-        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_INCLUDE_DIR}>)
+        "${CMAKE_SOURCE_DIR}/utils")
     target_link_libraries(ffplay PRIVATE
         PkgConfig::FFMPEG
         PkgConfig::SDL2
-        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_LIBRARY}>
+        $<$<BOOL:${HAVE_VULKAN_RENDERER}>:PkgConfig::LIBPLACEBO>
         $<$<BOOL:${HAVE_VULKAN_RENDERER}>:Vulkan::Vulkan>)
 endif()
 

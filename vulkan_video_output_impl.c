@@ -376,8 +376,8 @@ static int create_vk_by_placebo(VkRenderer *renderer,
     int decode_index;
     int decode_count;
     int ret;
-    const char **dev_exts;
-    int num_dev_exts;
+    const char **dev_exts = NULL;
+    int num_dev_exts = 0;
 
     ctx->get_proc_addr = SDL_Vulkan_GetVkGetInstanceProcAddr();
 
@@ -392,9 +392,11 @@ static int create_vk_by_placebo(VkRenderer *renderer,
     }
     ctx->inst = ctx->placebo_instance->instance;
 
+#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(60, 8, 100)
     dev_exts = av_vk_get_optional_device_extensions(&num_dev_exts);
     if (!dev_exts)
         return AVERROR(ENOMEM);
+#endif
 
     ctx->placebo_vulkan = pl_vulkan_create(ctx->vk_log, pl_vulkan_params(
             .instance = ctx->placebo_instance->instance,
