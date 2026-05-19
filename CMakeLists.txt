@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 23)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+include(FetchContent)
+
+option(BUILD_TESTS "Build unit tests" ON)
+
 # ---- Find FFmpeg & SDL2 --------------------------------------------------
 if(WIN32)
     set(THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/third_party" CACHE PATH
@@ -291,4 +295,33 @@ if(WIN32)
                 VERBATIM)
         endforeach()
     endif()
+endif()
+
+# ---- Unit tests ----------------------------------------------------------
+
+if(BUILD_TESTS)
+    enable_testing()
+
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.7.1
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    add_executable(test_clock
+        tests/test_clock.cpp
+        src/clock.cpp
+    )
+    target_include_directories(test_clock PRIVATE
+        "${CMAKE_SOURCE_DIR}/src"
+        "${CMAKE_SOURCE_DIR}/src/types"
+    )
+    target_link_libraries(test_clock PRIVATE
+        Catch2::Catch2WithMain
+    )
+
+    # Register each Catch2 SECTION / GENERATE permutation as a distinct CTest test
+    include(Catch)
+    catch_discover_tests(test_clock)
 endif()
