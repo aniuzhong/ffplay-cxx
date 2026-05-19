@@ -1,11 +1,6 @@
 #include "clock.h"
 
-#include <cmath>
-
-extern "C" {
-#include <libavutil/mathematics.h>
-#include <libavutil/time.h>
-}
+#include <chrono>
 
 Clock::Clock()
 {
@@ -14,17 +9,21 @@ Clock::Clock()
 
 double Clock::get(int queue_serial) const
 {
+    return get_at(queue_serial, std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+double Clock::get_at(int queue_serial, double time) const
+{
     if (queue_serial != serial_)
         return NAN;
     if (paused_)
         return pts_;
-    double time = av_gettime_relative() / 1000000.0;
     return pts_drift_ + time - (time - last_updated_) * (1.0 - speed_);
 }
 
 void Clock::set(double pts, int serial)
 {
-    double time = av_gettime_relative() / 1000000.0;
+    double time = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     set_at(pts, serial, time);
 }
 
