@@ -20,7 +20,7 @@ public:
     SubtitlePipeline &operator=(const SubtitlePipeline &) = delete;
 
     int  init(AVCodecContext *avctx, PacketQueue *subq,
-              FrameQueue *subpq, Demuxer *dmx, int reorder_pts);
+              FrameQueue *subpq_in, Demuxer *dmx, int reorder_pts);
     void start();
     void abort();
     void releaseCodec();

@@ -189,7 +189,7 @@ static SDL_RendererInfo renderer_info = {0};
 static VkRenderer *vk_renderer;
 #endif
 
-static int opt_add_vfilter(void *optctx, const char *opt, const char *arg)
+static int opt_add_vfilter(void *, const char *, const char *arg)
 {
     int ret = GROW_ARRAY(vfilters_list, nb_vfilters);
     if (ret < 0)
@@ -202,34 +202,34 @@ static int opt_add_vfilter(void *optctx, const char *opt, const char *arg)
     return 0;
 }
 
-static int opt_width(void *optctx, const char *opt, const char *arg)
+static int opt_width(void *, const char *opt, const char *arg)
 {
     double num;
     int ret = parse_number(opt, arg, OPT_TYPE_INT64, 1, INT_MAX, &num);
     if (ret < 0)
         return ret;
 
-    screen_width = num;
+    screen_width = static_cast<int>(num);
     return 0;
 }
 
-static void sigterm_handler(int sig)
+static void sigterm_handler(int)
 {
     exit(123);
 }
 
-static int opt_height(void *optctx, const char *opt, const char *arg)
+static int opt_height(void *, const char *opt, const char *arg)
 {
     double num;
     int ret = parse_number(opt, arg, OPT_TYPE_INT64, 1, INT_MAX, &num);
     if (ret < 0)
         return ret;
 
-    screen_height = num;
+    screen_height = static_cast<int>(num);
     return 0;
 }
 
-static int opt_format(void *optctx, const char *opt, const char *arg)
+static int opt_format(void *, const char *, const char *arg)
 {
     file_iformat = av_find_input_format(arg);
     if (!file_iformat) {
@@ -239,7 +239,7 @@ static int opt_format(void *optctx, const char *opt, const char *arg)
     return 0;
 }
 
-static int opt_sync(void *optctx, const char *opt, const char *arg)
+static int opt_sync(void *, const char *opt, const char *arg)
 {
     if (!strcmp(arg, "audio"))
         av_sync_type = AVSyncType::AudioMaster;
@@ -254,7 +254,7 @@ static int opt_sync(void *optctx, const char *opt, const char *arg)
     return 0;
 }
 
-static int opt_show_mode(void *optctx, const char *opt, const char *arg)
+static int opt_show_mode(void *, const char *opt, const char *arg)
 {
     show_mode = !strcmp(arg, "video") ? ShowMode::Video :
                 !strcmp(arg, "waves") ? ShowMode::Waves :
@@ -270,7 +270,7 @@ static int opt_show_mode(void *optctx, const char *opt, const char *arg)
     return 0;
 }
 
-static int opt_input_file(void *optctx, const char *filename)
+static int opt_input_file(void *, const char *filename)
 {
     if (input_filename) {
         av_log(nullptr, AV_LOG_FATAL,
@@ -287,7 +287,7 @@ static int opt_input_file(void *optctx, const char *filename)
     return 0;
 }
 
-static int opt_codec(void *optctx, const char *opt, const char *arg)
+static int opt_codec(void *, const char *opt, const char *arg)
 {
    const char *spec = strchr(opt, ':');
    const char **name;
@@ -380,7 +380,7 @@ static void show_usage(void)
     av_log(nullptr, AV_LOG_INFO, "\n");
 }
 
-void show_help_default(const char *opt, const char *arg)
+void show_help_default(const char *, const char *)
 {
     av_log_set_callback(log_callback_help);
     show_usage();
@@ -451,7 +451,7 @@ static void refresh_loop_wait_player(Player *p, SDL_Event *event)
             cursor_hidden = 1;
         }
         if (remaining_time > 0.0)
-            av_usleep((int64_t)(remaining_time * 1000000.0));
+            av_usleep(static_cast<unsigned>((int64_t)(remaining_time * 1000000.0)));
         remaining_time = REFRESH_RATE;
         if (p->audioVis().mode() != ShowMode::None &&
             (!p->isPaused() || p->forceRefreshRef()))
@@ -465,7 +465,7 @@ static void seek_chapter_player(Player *p, int incr)
     if (!p || !p->dmx() || !p->dmx()->ic()->nb_chapters) return;
     double pos_d = p->currentPosition();
     int64_t pos = (int64_t)(pos_d * AV_TIME_BASE);
-    int i;
+    unsigned int i;
     for (i = 0; i < p->dmx()->ic()->nb_chapters; i++) {
         AVChapter *ch = p->dmx()->ic()->chapters[i];
         if (av_compare_ts(pos, AV_TIME_BASE_Q, ch->start, ch->time_base) < 0) {
@@ -868,7 +868,4 @@ int main(int argc, char **argv)
     p->start();
 
     event_loop_player(p);
-
-    /* never returns */
-    return 0;
 }

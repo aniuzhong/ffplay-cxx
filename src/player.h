@@ -5,21 +5,21 @@
 #include <memory>
 #include <vector>
 
-extern "C" {
 #include <SDL.h>
+
+extern "C" {
 #include <libavformat/avformat.h>
 }
 
 #include "audio_pipeline.h"
+#include "audio_output.h"
+#include "audio_visualizer.h"
+#include "avsync_type.h"
 #include "clock.h"
 #include "frame_queue.h"
 #include "packet_queue.h"
 #include "subtitle_pipeline.h"
 #include "video_pipeline.h"
-
-#include "audio_output.h"
-#include "audio_visualizer.h"
-#include "avsync_type.h"
 
 class Demuxer;
 class VideoOutput;

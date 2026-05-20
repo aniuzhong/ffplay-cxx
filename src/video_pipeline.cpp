@@ -48,15 +48,15 @@ VideoPipeline::~VideoPipeline()
 }
 
 int VideoPipeline::init(AVCodecContext *avctx, PacketQueue *videoq,
-                         FrameQueue *pictq, Demuxer *dmx,
+                         FrameQueue *pictq_in, Demuxer *dmx,
                          AVStream *video_st, int reorder_pts)
 {
-    if (!avctx || !videoq || !pictq || !dmx || !video_st)
+    if (!avctx || !videoq || !pictq_in || !dmx || !video_st)
         return AVERROR(EINVAL);
 
     stream       = video_st;
     this->pktq   = videoq;
-    this->pictq  = pictq;
+    this->pictq  = pictq_in;
     dmx_         = dmx;
 
     return decoder.init(avctx, videoq, [dmx] { dmx->wake(); }, reorder_pts);
@@ -101,7 +101,8 @@ void VideoPipeline::releaseCodec()
 static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
                                  AVFilterContext *source_ctx, AVFilterContext *sink_ctx)
 {
-    int ret, i;
+    int ret;
+    unsigned i;
     int nb_filters = graph->nb_filters;
     AVFilterInOut *outputs = nullptr, *inputs = nullptr;
 
@@ -156,7 +157,6 @@ static int configure_video_filters(AVFilterGraph *graph,
     AVRational fr = av_guess_frame_rate(ic, vst, nullptr);
     const AVDictionaryEntry *e = nullptr;
     int nb_pix_fmts;
-    int i;
     AVBufferSrcParameters *par = av_buffersrc_parameters_alloc();
 
     if (!par) return AVERROR(ENOMEM);

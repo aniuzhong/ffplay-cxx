@@ -329,7 +329,7 @@ void SDLVideoOutput::clear_subtitle_areas(Frame *sp)
 {
     if (!sp || !sp->uploaded || !sub_texture_)
         return;
-    for (int i = 0; i < sp->sub.num_rects; i++) {
+    for (unsigned i = 0; i < sp->sub.num_rects; i++) {
         AVSubtitleRect *sub_rect = sp->sub.rects[i];
         uint8_t *pixels;
         int pitch;
@@ -362,7 +362,7 @@ void SDLVideoOutput::display_image(Frame *vp, Frame *sp)
                                     SDL_BLENDMODE_BLEND, 1) < 0)
                     return;
 
-                for (int i = 0; i < sp->sub.num_rects; i++) {
+                for (unsigned i = 0; i < sp->sub.num_rects; i++) {
                     AVSubtitleRect *sub_rect = sp->sub.rects[i];
                     sub_rect->x = av_clip(sub_rect->x, 0, sp->width);
                     sub_rect->y = av_clip(sub_rect->y, 0, sp->height);

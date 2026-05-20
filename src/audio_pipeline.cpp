@@ -52,15 +52,15 @@ AudioPipeline::~AudioPipeline()
 }
 
 int AudioPipeline::init(AVCodecContext *avctx, PacketQueue *audioq,
-                         FrameQueue *sampq, Demuxer *dmx,
+                         FrameQueue *sampq_in, Demuxer *dmx,
                          AVStream *audio_st, int reorder_pts)
 {
-    if (!avctx || !audioq || !sampq || !dmx || !audio_st)
+    if (!avctx || !audioq || !sampq_in || !dmx || !audio_st)
         return AVERROR(EINVAL);
 
     stream       = audio_st;
     this->pktq   = audioq;
-    this->sampq  = sampq;
+    this->sampq  = sampq_in;
     dmx_         = dmx;
 
     return decoder.init(avctx, audioq, [dmx] { dmx->wake(); }, reorder_pts);
@@ -237,7 +237,8 @@ int AudioPipeline::fill(uint8_t *, int, bool,
 static int configure_filtergraph(AVFilterGraph *graph, const char *filtergraph,
                                  AVFilterContext *source_ctx, AVFilterContext *sink_ctx)
 {
-    int ret, i;
+    int ret;
+    unsigned i;
     int nb_filters = graph->nb_filters;
     AVFilterInOut *outputs = nullptr, *inputs = nullptr;
 

@@ -28,7 +28,7 @@ public:
     AudioPipeline &operator=(const AudioPipeline &) = delete;
 
     int  init(AVCodecContext *avctx, PacketQueue *audioq,
-              FrameQueue *sampq, Demuxer *dmx,
+              FrameQueue *sampq_in, Demuxer *dmx,
               AVStream *audio_st, int reorder_pts);
     void start(Player *player);
     void abort();

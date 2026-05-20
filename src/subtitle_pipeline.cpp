@@ -19,13 +19,13 @@ SubtitlePipeline::~SubtitlePipeline()
 }
 
 int SubtitlePipeline::init(AVCodecContext *avctx, PacketQueue *subq,
-                            FrameQueue *subpq, Demuxer *dmx, int reorder_pts)
+                            FrameQueue *subpq_in, Demuxer *dmx, int reorder_pts)
 {
-    if (!avctx || !subq || !subpq || !dmx)
+    if (!avctx || !subq || !subpq_in || !dmx)
         return AVERROR(EINVAL);
 
     this->pktq   = subq;
-    this->subpq  = subpq;
+    this->subpq  = subpq_in;
     dmx_         = dmx;
 
     return decoder.init(avctx, subq,

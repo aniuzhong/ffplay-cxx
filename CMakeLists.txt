@@ -8,6 +8,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(FetchContent)
 
+if(MSVC)
+    add_compile_options(/utf-8 /W4)
+    set_source_files_properties(
+        src/compat/cmdutils.c
+        src/compat/opt_common.c
+        PROPERTIES COMPILE_FLAGS "/W1 /D_CRT_SECURE_NO_WARNINGS")
+endif()
+
 option(BUILD_TESTS "Build unit tests" ON)
 
 # ---- Find FFmpeg & SDL2 --------------------------------------------------
@@ -214,13 +222,14 @@ if(WIN32)
         "${CMAKE_SOURCE_DIR}"
         "${CMAKE_SOURCE_DIR}/src"
         "${CMAKE_SOURCE_DIR}/src/queue"
-        "${CMAKE_SOURCE_DIR}/src/compat"
         "${CMAKE_SOURCE_DIR}/src/types"
         "${CMAKE_SOURCE_DIR}/src/video"
         "${CMAKE_SOURCE_DIR}/src/audio"
         "${CMAKE_SOURCE_DIR}/shim/include"
-        "${FFMPEG_PREBUILT_ROOT}/include"
         $<$<BOOL:${HAVE_VULKAN_RENDERER}>:${LIBPLACEBO_INCLUDE_DIR}>)
+    target_include_directories(ffplay SYSTEM PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/compat"
+        "${FFMPEG_PREBUILT_ROOT}/include")
     target_link_libraries(ffplay PRIVATE
         ${_ff_lib_avutil}
         ${_ff_lib_avcodec}
@@ -238,20 +247,16 @@ else()
         "${CMAKE_SOURCE_DIR}"
         "${CMAKE_SOURCE_DIR}/src"
         "${CMAKE_SOURCE_DIR}/src/queue"
-        "${CMAKE_SOURCE_DIR}/src/compat"
         "${CMAKE_SOURCE_DIR}/src/types"
         "${CMAKE_SOURCE_DIR}/src/video"
         "${CMAKE_SOURCE_DIR}/src/audio")
+    target_include_directories(ffplay SYSTEM PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/compat")
     target_link_libraries(ffplay PRIVATE
         PkgConfig::FFMPEG
         PkgConfig::SDL2
         $<$<BOOL:${HAVE_VULKAN_RENDERER}>:PkgConfig::LIBPLACEBO>
         $<$<BOOL:${HAVE_VULKAN_RENDERER}>:Vulkan::Vulkan>)
-endif()
-
-if(MSVC)
-    add_compile_options(/utf-8)
-    target_compile_options(ffplay PRIVATE /W0)
 endif()
 
 # ---- copy runtime DLLs (Windows only) ----------------------------------

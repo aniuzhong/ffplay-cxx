@@ -54,7 +54,7 @@ Demuxer::~Demuxer()
     av_free(filename_);
 }
 
-int Demuxer::init(AVDictionary **format_opts, AVDictionary *codec_opts)
+int Demuxer::init(AVDictionary **fmt_opts, AVDictionary *cdc_opts)
 {
     int err, i, ret;
     int st_index[AVMEDIA_TYPE_NB];
@@ -77,21 +77,21 @@ int Demuxer::init(AVDictionary **format_opts, AVDictionary *codec_opts)
     ic_->interrupt_callback.callback = demuxer_decode_interrupt_cb;
     ic_->interrupt_callback.opaque = this;
 
-    if (!av_dict_get(*format_opts, "scan_all_pmts", nullptr, AV_DICT_MATCH_CASE)) {
-        av_dict_set(format_opts, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
+    if (!av_dict_get(*fmt_opts, "scan_all_pmts", nullptr, AV_DICT_MATCH_CASE)) {
+        av_dict_set(fmt_opts, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
         scan_all_pmts_set = 1;
     }
-    err = avformat_open_input(&ic_, filename_, iformat_, format_opts);
+    err = avformat_open_input(&ic_, filename_, iformat_, fmt_opts);
     if (err < 0) {
         print_error(filename_, err);
         ret = -1;
         goto fail;
     }
     if (scan_all_pmts_set)
-        av_dict_set(format_opts, "scan_all_pmts", nullptr, AV_DICT_MATCH_CASE);
-    remove_avoptions(format_opts, codec_opts);
+        av_dict_set(fmt_opts, "scan_all_pmts", nullptr, AV_DICT_MATCH_CASE);
+    remove_avoptions(fmt_opts, cdc_opts);
 
-    ret = check_avoptions(*format_opts);
+    ret = check_avoptions(*fmt_opts);
     if (ret < 0)
         goto fail;
 
@@ -102,7 +102,7 @@ int Demuxer::init(AVDictionary **format_opts, AVDictionary *codec_opts)
         AVDictionary **opts;
         int orig_nb_streams = ic_->nb_streams;
 
-        err = setup_find_stream_info_opts(ic_, codec_opts, &opts);
+        err = setup_find_stream_info_opts(ic_, cdc_opts, &opts);
         if (err < 0) {
             av_log(nullptr, AV_LOG_ERROR,
                    "Error setting up avformat_find_stream_info() options\n");
@@ -154,15 +154,15 @@ int Demuxer::init(AVDictionary **format_opts, AVDictionary *codec_opts)
 
     // select streams
     memset(st_index, -1, sizeof(st_index));
-    for (i = 0; i < ic_->nb_streams; i++) {
-        AVStream *st = ic_->streams[i];
+    for (unsigned k = 0; k < ic_->nb_streams; k++) {
+        AVStream *st = ic_->streams[k];
         enum AVMediaType type = st->codecpar->codec_type;
         st->discard = AVDISCARD_ALL;
         if (type >= 0 && options_.wanted_stream_spec[type] &&
             st_index[type] == -1)
             if (avformat_match_stream_specifier(ic_, st,
                     options_.wanted_stream_spec[type]) > 0)
-                st_index[type] = i;
+                st_index[type] = k;
         st->event_flags &= ~AVSTREAM_EVENT_FLAG_METADATA_UPDATED;
     }
     for (i = 0; i < AVMEDIA_TYPE_NB; i++) {
@@ -201,8 +201,8 @@ int Demuxer::init(AVDictionary **format_opts, AVDictionary *codec_opts)
     ret = 0;
 fail:
     av_packet_free(&pkt);
-    // Free format_opts: ownership was transferred.
-    av_dict_free(format_opts);
+    // Free fmt_opts: ownership was transferred.
+    av_dict_free(fmt_opts);
     if (ret < 0 && ic_) {
         avformat_close_input(&ic_);
         ic_ = nullptr;

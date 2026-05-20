@@ -5,17 +5,17 @@
 #include <cstring>
 
 extern "C" {
-#include "libavcodec/avcodec.h"
-#include "libavutil/avassert.h"
-#include "libavutil/channel_layout.h"
-#include "libavutil/error.h"
-#include "libavutil/frame.h"
-#include "libavutil/log.h"
-#include "libavutil/macros.h"
-#include "libavutil/mem.h"
-#include "libavutil/samplefmt.h"
-#include "libavutil/time.h"
-#include "libswresample/swresample.h"
+#include <libavcodec/avcodec.h>
+#include <libavutil/avassert.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/error.h>
+#include <libavutil/frame.h>
+#include <libavutil/log.h>
+#include <libavutil/macros.h>
+#include <libavutil/mem.h>
+#include <libavutil/samplefmt.h>
+#include <libavutil/time.h>
+#include <libswresample/swresample.h>
 }
 
 constexpr int SDL_AUDIO_MIN_BUFFER_SIZE = 512;
@@ -92,7 +92,7 @@ int SDLAudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
         av_channel_layout_default(&wanted_ch_layout, wanted_nb_channels);
     }
     wanted_nb_channels = wanted_ch_layout.nb_channels;
-    wanted_spec.channels = wanted_nb_channels;
+    wanted_spec.channels = static_cast<Uint8>(wanted_nb_channels);
     wanted_spec.freq = sample_rate;
     if (wanted_spec.freq <= 0 || wanted_spec.channels <= 0) {
         av_log(nullptr, AV_LOG_ERROR, "Invalid sample rate or channel count!\n");
@@ -113,10 +113,10 @@ int SDLAudioOutput::open(const AVChannelLayout *ch_layout, int sample_rate,
                                               SDL_AUDIO_ALLOW_CHANNELS_CHANGE))) {
         av_log(nullptr, AV_LOG_WARNING, "SDL_OpenAudio (%d channels, %d Hz): %s\n",
                wanted_spec.channels, wanted_spec.freq, SDL_GetError());
-        wanted_spec.channels = next_nb_channels[FFMIN(7, wanted_spec.channels)];
+        wanted_spec.channels = static_cast<Uint8>(next_nb_channels[FFMIN(7, wanted_spec.channels)]);
         if (!wanted_spec.channels) {
             wanted_spec.freq = next_sample_rates[next_sample_rate_idx--];
-            wanted_spec.channels = wanted_nb_channels;
+            wanted_spec.channels = static_cast<Uint8>(wanted_nb_channels);
             if (!wanted_spec.freq) {
                 av_log(nullptr, AV_LOG_ERROR,
                        "No more combinations to try, audio open failed\n");

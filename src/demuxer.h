@@ -83,11 +83,11 @@ public:
     Demuxer(const Demuxer &) = delete;
     Demuxer &operator=(const Demuxer &) = delete;
 
-    // init:  format_opts — ownership transferred; *format_opts becomes
+    // init:  fmt_opts — ownership transferred; *fmt_opts becomes
     //        nullptr on return (success or failure).
-    //        codec_opts — read-only; caller retains ownership and must
+    //        cdc_opts — read-only; caller retains ownership and must
     //        guarantee the pointer stays valid for the entire call.
-    int  init(AVDictionary **format_opts, AVDictionary *codec_opts);
+    int  init(AVDictionary **fmt_opts, AVDictionary *cdc_opts);
 
     // All handlers must be set before start().
     void set_packet_handler(PacketHandler h)           { on_packet_ = std::move(h); }

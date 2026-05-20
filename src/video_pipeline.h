@@ -25,7 +25,7 @@ public:
     VideoPipeline &operator=(const VideoPipeline &) = delete;
 
     int  init(AVCodecContext *avctx, PacketQueue *videoq,
-              FrameQueue *pictq, Demuxer *dmx,
+              FrameQueue *pictq_in, Demuxer *dmx,
               AVStream *video_st, int reorder_pts);
     void start(Player *player);
     void abort();

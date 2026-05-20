@@ -86,7 +86,7 @@ int AudioVisualizer::compute_start_index(int channels, int audio_write_buf_size,
     if (delay < data_used)
         delay = data_used;
 
-    return compute_mod(display_ring_index_ - delay * channels, SAMPLE_ARRAY_SIZE);
+    return compute_mod(static_cast<int>(display_ring_index_ - delay * channels), SAMPLE_ARRAY_SIZE);
 }
 
 int AudioVisualizer::prepare_waveform(int channels, int audio_write_buf_size,
@@ -187,7 +187,7 @@ int AudioVisualizer::prepare_spectrum_column(int channels, int audio_write_buf_s
         int i = i_start + ch;
         for (int x = 0; x < 2 * nb_freq; x++) {
             double w = (x - nb_freq) * (1.0 / nb_freq);
-            data_in[ch][x] = display_ring_[static_cast<size_t>(i)] * (1.0 - w * w);
+            data_in[ch][x] = display_ring_[static_cast<size_t>(i)] * static_cast<float>(1.0 - w * w);
             i += channels;
             if (i >= SAMPLE_ARRAY_SIZE)
                 i -= SAMPLE_ARRAY_SIZE;

@@ -281,7 +281,7 @@ int Player::openStream(int stream_index)
     int ret = 0;
     int stream_lowres = lowres;
 
-    if (stream_index < 0 || stream_index >= ic->nb_streams)
+    if (stream_index < 0 || static_cast<unsigned>(stream_index) >= ic->nb_streams)
         return -1;
 
     avctx = avcodec_alloc_context3(nullptr);
@@ -440,7 +440,7 @@ out:
 void Player::closeStream(int stream_index)
 {
     AVFormatContext *ic = dmx_->ic();
-    if (stream_index < 0 || stream_index >= ic->nb_streams)
+    if (stream_index < 0 || static_cast<unsigned>(stream_index) >= ic->nb_streams)
         return;
 
     AVCodecParameters *codecpar = ic->streams[stream_index]->codecpar;
@@ -700,7 +700,7 @@ void Player::cycleChannel(int codec_type)
         if (p) {
             nb_streams = p->nb_stream_indexes;
             for (start_index = 0; start_index < nb_streams; start_index++)
-                if (p->stream_index[start_index] == stream_index)
+                if (static_cast<int>(p->stream_index[start_index]) == stream_index)
                     break;
             if (start_index == nb_streams) start_index = -1;
             stream_index = start_index;
