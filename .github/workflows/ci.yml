@@ -27,13 +27,13 @@ jobs:
           key: win-deps-${{ hashFiles('cmake/DownloadPrebuiltDeps.cmake') }}
 
       - name: Configure
-        run: >
-          cmake -B build
-          -DCMAKE_BUILD_TYPE=Release
-          -DENABLE_VULKAN=OFF
+        run: cmake --preset ci-windows
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build --preset ci-windows
+
+      - name: Test
+        run: ctest --preset ci-windows
 
   # Linux job pending: waiting for GitHub to add ubuntu-26.04 runner.
   # The project requires FFmpeg 8.x APIs which are not available in

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 project(ffplay-cpp C CXX)
 
 set(CMAKE_C_STANDARD 99)
@@ -250,7 +250,7 @@ else()
 endif()
 
 if(MSVC)
-    target_compile_options(ffplay PRIVATE /utf-8)
+    add_compile_options(/utf-8)
     target_compile_options(ffplay PRIVATE /W0)
 endif()
 
